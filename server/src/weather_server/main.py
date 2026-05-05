@@ -8,8 +8,9 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from .models import WeatherIn, WeatherOut
+from .models import WeatherIn, WeatherOut, ForecastItem, ForecastResponse
 from .storage import Storage
+from .forecast import Forecaster, ForecastError, reference_time_utc
 
 
 HOST = os.getenv("WEATHER_SERVER_HOST", "0.0.0.0")
@@ -20,12 +21,19 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://weather:weather@db:5432/weatherstation",
 )
+FORECAST_MODEL_PATH = os.getenv(
+    "WEATHER_FORECAST_MODEL",
+    str(Path(__file__).resolve().parent.parent.parent
+        / "data" / "models" / "forecast_v1.joblib"),
+)
+FORECAST_HISTORY_HOURS = int(os.getenv("WEATHER_FORECAST_HISTORY_HOURS", "12"))
 CLEANUP_INTERVAL_SECONDS = 3600
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 storage = Storage(database_url=DATABASE_URL, retention_days=RETENTION_DAYS)
+forecaster = Forecaster(model_path=FORECAST_MODEL_PATH)
 
 
 async def cleanup_loop() -> None:
@@ -125,6 +133,40 @@ def history(
 ):
     rows = storage.history(hours=hours, station_id=station_id)
     return [row_to_out(row) for row in rows]
+
+
+@app.get("/api/forecast", response_model=ForecastResponse)
+def forecast(station_id: str | None = None) -> ForecastResponse:
+    if not forecaster.is_available:
+        raise HTTPException(
+            status_code=503,
+            detail=f"forecast model not available at {FORECAST_MODEL_PATH}",
+        )
+    rows = storage.history(
+        hours=FORECAST_HISTORY_HOURS, station_id=station_id
+    )
+    if not rows:
+        raise HTTPException(
+            status_code=503,
+            detail="no station readings available for forecast",
+        )
+    try:
+        predictions = forecaster.predict(rows)
+        meta = forecaster.metadata()
+    except ForecastError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return ForecastResponse(
+        generated_at=reference_time_utc(),
+        class_labels=meta["class_labels"],
+        horizons=[
+            ForecastItem(
+                horizon_hours=p.horizon_hours,
+                label=p.label,
+                probabilities=p.probabilities,
+            )
+            for p in predictions
+        ],
+    )
 
 
 @app.get("/", response_class=HTMLResponse)

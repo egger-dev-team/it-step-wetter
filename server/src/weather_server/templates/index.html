@@ -177,6 +177,12 @@
     </section>
 
     <section class="card">
+      <span class="pill">Next 24 h Forecast</span>
+      <div id="forecast-status" class="hint" style="margin-top: 8px;">Loading forecast...</div>
+      <div id="forecast-grid" class="grid" style="margin-top: 10px; display: none;"></div>
+    </section>
+
+    <section class="card">
       <div class="toolbar">
         <label for="hours">Hours</label>
         <input id="hours" type="number" min="1" max="168" value="24">
@@ -251,6 +257,47 @@
 
     document.getElementById("load").addEventListener("click", loadHistory);
     loadHistory();
+
+    const FORECAST_ICONS = { none: "☀", rain: "☔", snow: "❄" };
+    const FORECAST_LABELS = { none: "Dry", rain: "Rain", snow: "Snow" };
+
+    async function loadForecast() {
+      const status = document.getElementById("forecast-status");
+      const grid = document.getElementById("forecast-grid");
+      try {
+        const res = await fetch("/api/forecast");
+        if (!res.ok) {
+          const detail = await res.text();
+          status.textContent = `Forecast unavailable (${res.status}): ${detail}`;
+          grid.style.display = "none";
+          return;
+        }
+        const data = await res.json();
+        grid.innerHTML = data.horizons.map((h) => {
+          const probs = h.probabilities || {};
+          const top = h.label;
+          const pct = ((probs[top] ?? 0) * 100).toFixed(0);
+          const icon = FORECAST_ICONS[top] ?? "?";
+          const label = FORECAST_LABELS[top] ?? top;
+          const breakdown = data.class_labels
+            .map((c) => `${FORECAST_LABELS[c] ?? c}: ${((probs[c] ?? 0) * 100).toFixed(0)}%`)
+            .join(" · ");
+          return `<div class="metric">
+            <b>+${h.horizon_hours} h</b>
+            <div class="value">${icon} ${label} (${pct}%)</div>
+            <div class="hint" style="margin-top: 4px;">${breakdown}</div>
+          </div>`;
+        }).join("");
+        const generated = new Date(data.generated_at).toLocaleString();
+        status.textContent = `Generated ${generated}`;
+        grid.style.display = "";
+      } catch (err) {
+        status.textContent = `Forecast error: ${err}`;
+        grid.style.display = "none";
+      }
+    }
+
+    loadForecast();
   </script>
 </body>
 </html>

@@ -75,6 +75,30 @@ Then flash the sketch. Data should appear in:
 - GET /api/weather/latest?station_id=1356599
 - GET /api/weather/history?hours=24
 - GET /api/weather/history?hours=24&station_id=1356599
+- GET /api/forecast — 1/3/6/12/24 h precipitation-type forecast (none / rain / snow)
+
+## Forecast model
+
+A simple precipitation-type forecaster (3 classes: none / rain / snow) is
+trained offline from ERA5 reanalysis data (Open-Meteo Archive) for a grid
+point near Sankt Johann in Tirol. The trained model is loaded at startup
+and exposed via `GET /api/forecast`.
+
+Re-train (one-off, takes ~1 min):
+
+```bash
+# 1. Download ~10 years of hourly history (free, no API key)
+uv run python scripts/download_history.py --start 2016-01-01 --end 2025-12-31
+
+# 2. Train model bundle to data/models/forecast_v1.joblib
+uv run python scripts/train_forecast.py
+```
+
+Override coordinates with `--lat` / `--lon` if you want a different grid
+point. Restart the API container after retraining.
+
+The forecast endpoint requires at least 6 h of recent station readings in
+the database; otherwise it returns 503.
 
 ## Operations
 

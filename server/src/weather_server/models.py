@@ -55,3 +55,15 @@ class WeatherOut(BaseModel):
     windrichtung: str
     helligkeit: float
     received_at: datetime
+
+
+class ForecastItem(BaseModel):
+    horizon_hours: int
+    label: str
+    probabilities: dict[str, float]
+
+
+class ForecastResponse(BaseModel):
+    generated_at: datetime
+    horizons: list[ForecastItem]
+    class_labels: list[str]

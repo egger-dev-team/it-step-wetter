@@ -34,6 +34,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-weather}:${POSTGRES_PASSWORD:-weather}@db:5432/${POSTGRES_DB:-weatherstation}
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro
 
   grafana:
     image: grafana/grafana-oss:11.1.0
