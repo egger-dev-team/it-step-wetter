@@ -104,6 +104,31 @@ Stop and remove volumes (resets DB and Grafana state):
 docker compose down -v
 ```
 
+## Simulate a second station
+
+Use the included simulator to push realistic sample data from a virtual second station.
+
+Run a short burst test:
+
+```bash
+python scripts/simulate_station.py --station-id sim-station-2 --count 20 --interval 2
+```
+
+Run continuously (default 15-second interval):
+
+```bash
+python scripts/simulate_station.py --station-id sim-station-2
+```
+
+Common options:
+
+- `--base-url` API base URL (default `http://127.0.0.1:8000`)
+- `--api-key` shared API key (default `46885206`)
+- `--interval` seconds between sends
+- `--count` number of messages (`0` means infinite)
+
+This is useful when the physical station is not available and you still want dashboard activity.
+
 ## Notes
 
 - This setup is clean-start PostgreSQL. No SQLite import is included.
