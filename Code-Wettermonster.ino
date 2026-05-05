@@ -30,7 +30,7 @@ const char* id = "1356599";
 const char* key = "46885206";
 const char* localServerHost = "192.168.1.107";
 const int localServerPort = 8000;
-const int interval = 5;
+const int interval = 1;
 
 float temperature;
 float humidity;
@@ -70,9 +70,7 @@ void sendToWettermonster() {
    ESP.restart();
 	}
 
-	//if (WiFi.status() == WL_CONNECTED && client.connect("upload.wettermonster.de", 80)) // Verbindung zum Server aufbauen
-	//if (WiFi.status() == WL_CONNECTED && client.connect("192.168.1.101", 8888)) // lokal
-	if (WiFi.status() == WL_CONNECTED && client.connect("wetterstation.k8s.egger.com", 8888))
+	if (WiFi.status() == WL_CONNECTED && client.connect(localServerHost, localServerPort))
 	{
 
 		Serial.println ("Verbunden mit Server");
@@ -86,7 +84,7 @@ void sendToWettermonster() {
 		Serial.print("Helligkeit:          "); Serial.print(luminosity, 2); Serial.println(" lux");
 		Serial.println("-------------------");
 
-		client.print("GET /index.html");
+		client.print("GET /speichern.php");
 		client.print("?id=");
 		client.print(id);
 		client.print("&schluessel=");
@@ -106,7 +104,10 @@ void sendToWettermonster() {
 		client.print("&helligkeit=");
 		client.print(luminosity);
 		client.println(" HTTP/1.1");
-		client.println("Host: wetterstation.k8s.egger.com");
+		client.print("Host: ");
+		client.print(localServerHost);
+		client.print(":");
+		client.println(localServerPort);
 		client.println("User-Agent: Wettermonster");
 		client.println("Accept: text/html");
 		client.println();
@@ -281,6 +282,7 @@ void readWeatherMeters() {
 	else if (windDirectionVoltage >= 163 && windDirectionVoltage < 212) {windDirection = (char*)"WNW";}
 	else if (windDirectionVoltage >= 106 && windDirectionVoltage < 163) {windDirection = (char*)"NW";}
 	else if (windDirectionVoltage >= 273 && windDirectionVoltage < 348) {windDirection = (char*)"NNW";}
+	else {windDirection = (char*)"UNKNOWN";}
 }
 
 void setup() {
