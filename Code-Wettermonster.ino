@@ -8,28 +8,31 @@
  */
 
 #include <ESP8266WiFi.h>
+//#include <WiFiEnterprise.h>
 #include <WiFiClient.h>
-#include <WiFiServer.h>
-#include <ESP8266WebServer.h>
+//#include <WiFiServer.h>
+//#include <wpa2_enterprise.h>
+//#include <ESP8266WebServer.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include "Adafruit_TSL2591.h"
-#include <Adafruit_HTU21DF.h>
+#include <Adafruit_TSL2591.h>
+#include <Adafruit_Si7021.h>
 #include <Adafruit_BMP280.h>
 
-
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591);
-Adafruit_HTU21DF htu = Adafruit_HTU21DF();
+Adafruit_Si7021 sensor = Adafruit_Si7021();
 Adafruit_BMP280 bmp;
 
+const char* ssid = "TP-Link_C667";
+const char* password = "67729821";
 
-const char* ssid = "test123";
-const char* password = "test";
-const char* id = "1356599";
-const char* key = "46885206";
-const char* localServerHost = "192.168.178.100";
-const int localServerPort = 8000;
-const int interval = 5;
+//const char* ssid = "weathernet";
+//const char* username = "weather";
+//const char* password = "8EceM(kHZ1";
+
+const char* id = "1356595";
+const char* key = "20846355";
+const int interval = 1;
 
 float temperature;
 float humidity;
@@ -58,6 +61,7 @@ void sendToWettermonster() {
    WiFi.disconnect();
    WiFi.mode(WIFI_OFF);
    WiFi.mode(WIFI_STA);
+	 //WiFi.
    WiFi.begin(ssid, password);
    delay(1000);
 	}
@@ -68,11 +72,23 @@ void sendToWettermonster() {
    ESP.restart();
 	}
 
-	if (WiFi.status() == WL_CONNECTED && client.connect(localServerHost, localServerPort)) // Verbindung zum lokalen Server aufbauen
+	//if (WiFi.status() == WL_CONNECTED && client.connect("upload.wettermonster.de", 80)) // Verbindung zum Server aufbauen
+	//if (WiFi.status() == WL_CONNECTED && client.connect("192.168.1.101", 8888)) // lokal
+	if (WiFi.status() == WL_CONNECTED && client.connect("wetterstation.k8s.egger.com", 8888))
 	{
 
-		Serial.println ("Verbunden mit lokalem Server");
-		client.print("GET /speichern.php");
+		Serial.println ("Verbunden mit Server");
+		Serial.println("--- Wetterdaten ---");
+		Serial.print("Temperatur:          "); Serial.print(temperature, 2); Serial.println(" Grad C");
+		Serial.print("Luftfeuchtigkeit:    "); Serial.print(humidity, 2); Serial.println(" %");
+		Serial.print("Luftdruck:           "); Serial.print(pressure, 2); Serial.println(" hPa");
+		Serial.print("Niederschlag:        "); Serial.print(Percipitation, 2); Serial.println(" mm");
+		Serial.print("Windgeschwindigkeit: "); Serial.print(windSpeed, 2); Serial.println(" km/h");
+		Serial.print("Windrichtung:        "); Serial.println(windDirection);
+		Serial.print("Helligkeit:          "); Serial.print(luminosity, 2); Serial.println(" lux");
+		Serial.println("-------------------");
+
+		client.print("GET /index.html");
 		client.print("?id=");
 		client.print(id);
 		client.print("&schluessel=");
@@ -92,10 +108,7 @@ void sendToWettermonster() {
 		client.print("&helligkeit=");
 		client.print(luminosity);
 		client.println(" HTTP/1.1");
-		client.print("Host: ");
-		client.print(localServerHost);
-		client.print(":");
-		client.println(localServerPort);
+		client.println("Host: wetterstation.k8s.egger.com");
 		client.println("User-Agent: Wettermonster");
 		client.println("Accept: text/html");
 		client.println();
@@ -110,7 +123,7 @@ void sendToWettermonster() {
 		      }
 		    }
 
-		Serial.println("Daten an Wettermonster gesendet");
+		Serial.println("Daten gesendet");
 	}
 
 	else
@@ -121,10 +134,10 @@ void sendToWettermonster() {
 	client.stop();
 }
 
-void readHTU() {
+void readSi() {
 
-	temperature = htu.readTemperature();
-	humidity = htu.readHumidity();
+	temperature = sensor.readTemperature();
+	humidity = sensor.readHumidity();
 
 }
 
@@ -254,32 +267,31 @@ void readWeatherMeters() {
 
 	int windDirectionVoltage = analogRead(A0);
 
-	if (windDirectionVoltage >= 212 && windDirectionVoltage < 273)    {windDirection = "N";}
-	else if (windDirectionVoltage >= 577 && windDirectionVoltage < 665) {windDirection = "NNE";}
-	else if (windDirectionVoltage >= 483 && windDirectionVoltage < 577) {windDirection = "NE";}
-	else if (windDirectionVoltage >= 929 && windDirectionVoltage < 943) {windDirection = "ENE";}
-	else if (windDirectionVoltage >= 906 && windDirectionVoltage < 929) {windDirection = "E";}
-	else if (windDirectionVoltage >= 943 && windDirectionVoltage < 1023){windDirection = "ESE";}
-	else if (windDirectionVoltage >= 795 && windDirectionVoltage < 858) {windDirection = "SE";}
-	else if (windDirectionVoltage >= 858 && windDirectionVoltage < 906) {windDirection = "SSE";}
-	else if (windDirectionVoltage >= 665 && windDirectionVoltage < 748) {windDirection = "S";}
-	else if (windDirectionVoltage >= 748 && windDirectionVoltage < 795) {windDirection = "SSW";}
-	else if (windDirectionVoltage >= 348 && windDirectionVoltage < 399) {windDirection = "SW";}
-	else if (windDirectionVoltage >= 399 && windDirectionVoltage < 483) {windDirection = "WSW";}
-	else if (windDirectionVoltage >= 0 && windDirectionVoltage < 106)   {windDirection = "W";}
-	else if (windDirectionVoltage >= 163 && windDirectionVoltage < 212) {windDirection = "WNW";}
-	else if (windDirectionVoltage >= 106 && windDirectionVoltage < 163) {windDirection = "NW";}
-	else if (windDirectionVoltage >= 273 && windDirectionVoltage < 348) {windDirection = "NNW";}
-	else {windDirection = "UNKNOWN";}
+	if (windDirectionVoltage >= 212 && windDirectionVoltage < 273)    {windDirection = (char*)"N";}
+	else if (windDirectionVoltage >= 577 && windDirectionVoltage < 665) {windDirection = (char*)"NNE";}
+	else if (windDirectionVoltage >= 483 && windDirectionVoltage < 577) {windDirection = (char*)"NE";}
+	else if (windDirectionVoltage >= 929 && windDirectionVoltage < 943) {windDirection = (char*)"ENE";}
+	else if (windDirectionVoltage >= 906 && windDirectionVoltage < 929) {windDirection = (char*)"E";}
+	else if (windDirectionVoltage >= 943 && windDirectionVoltage < 1023){windDirection =(char*)"ESE";}
+	else if (windDirectionVoltage >= 795 && windDirectionVoltage < 858) {windDirection = (char*)"SE";}
+	else if (windDirectionVoltage >= 858 && windDirectionVoltage < 906) {windDirection = (char*)"SSE";}
+	else if (windDirectionVoltage >= 665 && windDirectionVoltage < 748) {windDirection = (char*)"S";}
+	else if (windDirectionVoltage >= 748 && windDirectionVoltage < 795) {windDirection = (char*)"SSW";}
+	else if (windDirectionVoltage >= 348 && windDirectionVoltage < 399) {windDirection = (char*)"SW";}
+	else if (windDirectionVoltage >= 399 && windDirectionVoltage < 483) {windDirection = (char*)"WSW";}
+	else if (windDirectionVoltage >= 0 && windDirectionVoltage < 106)   {windDirection = (char*)"W";}
+	else if (windDirectionVoltage >= 163 && windDirectionVoltage < 212) {windDirection = (char*)"WNW";}
+	else if (windDirectionVoltage >= 106 && windDirectionVoltage < 163) {windDirection = (char*)"NW";}
+	else if (windDirectionVoltage >= 273 && windDirectionVoltage < 348) {windDirection = (char*)"NNW";}
 }
 
 void setup() {
 	Serial.begin(115200);
 
- WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
 	Serial.println("");
- Serial.print("Verbinde mit " + String(ssid));
+  Serial.print("Verbinde mit " + String(ssid));
 
 	while (WiFi.status() != WL_CONNECTED) {
 		Serial.print(".");
@@ -307,33 +319,37 @@ void setup() {
 		return;
 	}
 
-	if (!bmp.begin()) {
-		Serial.println("BMP280 konnte nicht gefunden werde, checke bitte die Verbindungen!");
+	if (!sensor.begin()) {
+		Serial.println("Si7021 konnte nicht gefunden werde, checke bitte die Verbindungen!");
 	}
 
-	if (!htu.begin()) {
-		Serial.println("HTU21DF konnte nicht gefunden werde, checke bitte die Verbindungen!");
+	if (!bmp.begin()) {
+		Serial.println("BMP280 konnte nicht gefunden werde, checke bitte die Verbindungen!");
 	}
 
 	lastMillis = millis();
 }
 
 void loop() {
-
-	if (millis() - lastMillis > (interval * 60000)) {
-		readTSL();
-		readHTU();
-		readBMP();
-		readWeatherMeters();
-		sendToWettermonster();
-		lastMillis = millis();
-	}
+	//if (millis() - lastMillis > (interval * 60000)) {		
+	readTSL();
+	readSi();
+	readBMP();
+	readWeatherMeters();
+	sendToWettermonster();
+	lastMillis = millis();
+	//}
 
 	if(ESP.getFreeHeap() <= 20000){
 		Serial.println("Der freie Heap beträgt nur noch: " + String(ESP.getFreeHeap()) + " Der ESP wird deshalb neu gestartet.");
 		ESP.restart();
 	}
 
-	delay(100);
+	//delay(100);
+
+	// Prometheus default is 15 second intervals but you can send several times per second if you want to.
+  // Collection and Sending could be parallelized or timed to ensure we're on a 15 seconds cadence,
+  // not simply add 15 second to however long collection & sending took.
+  delay(15000);
 
 }
