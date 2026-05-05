@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weatherstation Local</title>
+  <style>
+    :root {
+      --bg: #f7f8f3;
+      --paper: #ffffff;
+      --ink: #17313a;
+      --muted: #5f7279;
+      --accent: #0b8a6a;
+      --accent-2: #f0b429;
+      --line: #d9e1e3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 10%, #e4f6ee 0%, transparent 45%),
+        radial-gradient(circle at 85% 20%, #fff0cc 0%, transparent 40%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      letter-spacing: 0.03em;
+    }
+
+    .sub {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(23, 49, 58, 0.08);
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .metric {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fbfcfc;
+    }
+
+    .metric b {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover { background: #09795c; }
+
+    input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      min-width: 110px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      background: #f5f8f8;
+    }
+
+    .pill {
+      display: inline-block;
+      background: #e6f4ef;
+      color: var(--accent);
+      border: 1px solid #c5e9db;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .hint {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.88rem;
+    }
+
+    .warning {
+      color: #8a4e00;
+      background: #fff4dc;
+      border: 1px solid #ffd89a;
+      border-radius: 8px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Weatherstation Local Server</h1>
+    <p class="sub">Data is stored locally (rolling 7 days) and available over your Wi-Fi network.</p>
+
+    <section class="card">
+      <span class="pill">Latest Reading</span>
+      {% if latest %}
+      <div class="grid" style="margin-top: 10px;">
+        <div class="metric"><b>Station</b><div class="value">{{ latest['station_id'] }}</div></div>
+        <div class="metric"><b>Temperature</b><div class="value">{{ '%.1f'|format(latest['temperatur']) }} C</div></div>
+        <div class="metric"><b>Humidity</b><div class="value">{{ '%.1f'|format(latest['luftfeuchtigkeit']) }} %</div></div>
+        <div class="metric"><b>Pressure</b><div class="value">{{ '%.1f'|format(latest['luftdruck']) }} hPa</div></div>
+        <div class="metric"><b>Rain</b><div class="value">{{ '%.2f'|format(latest['niederschlag']) }} mm</div></div>
+        <div class="metric"><b>Wind</b><div class="value">{{ '%.2f'|format(latest['windgeschwindigkeit']) }} m/s {{ latest['windrichtung'] }}</div></div>
+        <div class="metric"><b>Light</b><div class="value">{{ '%.0f'|format(latest['helligkeit']) }} lx</div></div>
+        <div class="metric"><b>Received</b><div class="value">{{ latest['received_at'] }}</div></div>
+      </div>
+      {% else %}
+      <p class="warning">No data yet. Start the weather station upload and reload this page.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <label for="hours">Hours</label>
+        <input id="hours" type="number" min="1" max="168" value="24">
+        <label for="station">Station (optional)</label>
+        <input id="station" type="text" placeholder="station id">
+        <button id="load">Load History</button>
+      </div>
+      <div class="hint">API endpoint: /api/weather/history</div>
+      <div style="overflow-x: auto; margin-top: 10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Received</th>
+              <th>Station</th>
+              <th>Temp</th>
+              <th>Humidity</th>
+              <th>Pressure</th>
+              <th>Rain</th>
+              <th>Wind</th>
+              <th>Light</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function formatValue(v, digits) {
+      const n = Number(v);
+      if (Number.isNaN(n)) return "-";
+      return n.toFixed(digits);
+    }
+
+    function rowHtml(item) {
+      return `<tr>
+        <td>${item.received_at}</td>
+        <td>${item.station_id}</td>
+        <td>${formatValue(item.temperatur, 1)} C</td>
+        <td>${formatValue(item.luftfeuchtigkeit, 1)} %</td>
+        <td>${formatValue(item.luftdruck, 1)} hPa</td>
+        <td>${formatValue(item.niederschlag, 2)} mm</td>
+        <td>${formatValue(item.windgeschwindigkeit, 2)} m/s ${item.windrichtung}</td>
+        <td>${formatValue(item.helligkeit, 0)} lx</td>
+      </tr>`;
+    }
+
+    async function loadHistory() {
+      const hours = document.getElementById("hours").value || "24";
+      const station = document.getElementById("station").value.trim();
+      const qs = new URLSearchParams({ hours });
+      if (station) qs.set("station_id", station);
+
+      const res = await fetch(`/api/weather/history?${qs.toString()}`);
+      const rows = document.getElementById("rows");
+      rows.innerHTML = "";
+
+      if (!res.ok) {
+        rows.innerHTML = `<tr><td colspan="8">Request failed: ${res.status}</td></tr>`;
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.length) {
+        rows.innerHTML = '<tr><td colspan="8">No data for selected filter.</td></tr>';
+        return;
+      }
+
+      rows.innerHTML = data.map(rowHtml).join("");
+    }
+
+    document.getElementById("load").addEventListener("click", loadHistory);
+    loadHistory();
+  </script>
+</body>
+</html>
