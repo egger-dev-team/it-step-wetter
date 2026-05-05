@@ -1,0 +1,689 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "uid": "weather-overview-bg",
+  "title": "Wetterstation – Overview (Weather Background)",
+  "tags": ["weather", "wetterstation"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "1h"]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "station",
+        "label": "Station",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+        "query": "SELECT DISTINCT station_id FROM weather_records ORDER BY station_id",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": false, "text": "All", "value": "$__all" },
+        "sort": 1
+      },
+      {
+        "name": "weather_bg",
+        "label": "Weather Background",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+        "query": "SELECT CASE WHEN niederschlag > 0.2 AND temperatur < 1 THEN 'https://images.unsplash.com/photo-1491002052546-bf38f186af56?auto=format&fit=crop&w=1920&h=400&q=70' WHEN niederschlag > 0.2 THEN 'https://images.unsplash.com/photo-1519692933481-e162a57d6721?auto=format&fit=crop&w=1920&h=400&q=70' WHEN windgeschwindigkeit > 30 THEN 'https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=1920&h=400&q=70' WHEN helligkeit < 100 THEN 'https://images.unsplash.com/photo-1507400492013-162706c8c05e?auto=format&fit=crop&w=1920&h=400&q=70' WHEN helligkeit > 20000 AND temperatur > 18 AND windgeschwindigkeit < 25 AND niederschlag <= 0.1 THEN 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=1920&h=400&q=70' ELSE 'https://images.unsplash.com/photo-1499346030926-9a72daac6c63?auto=format&fit=crop&w=1920&h=400&q=70' END AS bg_url FROM weather_records WHERE station_id IN ($station) ORDER BY received_at DESC LIMIT 1;",
+        "refresh": 2,
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "sort": 0
+      },
+      {
+        "name": "weather_label",
+        "label": "Weather Label",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+        "query": "SELECT CASE WHEN niederschlag > 0.2 AND temperatur < 1 THEN 'Snowy ❄' WHEN niederschlag > 0.2 THEN 'Rainy ☔' WHEN windgeschwindigkeit > 30 THEN 'Windy 💨' WHEN helligkeit < 100 THEN 'Night 🌙' WHEN helligkeit > 20000 AND temperatur > 18 AND windgeschwindigkeit < 25 AND niederschlag <= 0.1 THEN 'Sunny ☀' ELSE 'Cloudy ☁' END AS label FROM weather_records WHERE station_id IN ($station) ORDER BY received_at DESC LIMIT 1;",
+        "refresh": 2,
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "sort": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 200,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "html",
+        "code": { "language": "html", "showLineNumbers": false, "showMiniMap": false },
+        "content": "<div style=\"position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.4);\">\n  <img src=\"${weather_bg:raw}\" alt=\"Weather background\" style=\"position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;\" />\n  <div style=\"position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.15) 0%,rgba(0,0,0,0.55) 100%);\"></div>\n  <div style=\"position:absolute;left:24px;bottom:16px;color:#fff;font-family:Inter,Arial,sans-serif;text-shadow:0 2px 6px rgba(0,0,0,0.6);\">\n    <div style=\"font-size:14px;letter-spacing:2px;text-transform:uppercase;opacity:0.85;\">Current Weather</div>\n    <div style=\"font-size:32px;font-weight:700;line-height:1.1;\">${weather_label}</div>\n  </div>\n</div>"
+      }
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "Current Conditions",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Temperature",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "#5794F2", "value": 0 },
+              { "color": "#73BF69", "value": 10 },
+              { "color": "#FADE2A", "value": 22 },
+              { "color": "#FF9830", "value": 28 },
+              { "color": "#F2495C", "value": 32 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", temperatur FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Humidity",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "min": 0,
+          "max": 100,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#FF9830", "value": null },
+              { "color": "#73BF69", "value": 35 },
+              { "color": "#5794F2", "value": 70 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", luftfeuchtigkeit FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Pressure",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#F2495C", "value": null },
+              { "color": "#FF9830", "value": 990 },
+              { "color": "#73BF69", "value": 1005 },
+              { "color": "#5794F2", "value": 1020 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", luftdruck FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Brightness",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lux",
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#3D3D3D", "value": null },
+              { "color": "#5794F2", "value": 100 },
+              { "color": "#FADE2A", "value": 5000 },
+              { "color": "#FF9830", "value": 30000 },
+              { "color": "#F2CC0C", "value": 80000 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", helligkeit FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "gauge",
+      "title": "Wind Speed",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 11 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocitykmh",
+          "decimals": 1,
+          "min": 0,
+          "max": 120,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#73BF69", "value": null },
+              { "color": "#FADE2A", "value": 20 },
+              { "color": "#FF9830", "value": 40 },
+              { "color": "#F2495C", "value": 70 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", windgeschwindigkeit FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Wind Direction",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 11 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#5794F2" },
+          "mappings": [
+            { "type": "value", "options": {
+              "N":   { "text": "↑ N",    "index": 0 },
+              "NNE": { "text": "↗ NNE",  "index": 1 },
+              "NE":  { "text": "↗ NE",   "index": 2 },
+              "ENE": { "text": "↗ ENE",  "index": 3 },
+              "E":   { "text": "→ E",    "index": 4 },
+              "ESE": { "text": "↘ ESE",  "index": 5 },
+              "SE":  { "text": "↘ SE",   "index": 6 },
+              "SSE": { "text": "↘ SSE",  "index": 7 },
+              "S":   { "text": "↓ S",    "index": 8 },
+              "SSW": { "text": "↙ SSW",  "index": 9 },
+              "SW":  { "text": "↙ SW",   "index": 10 },
+              "WSW": { "text": "↙ WSW",  "index": 11 },
+              "W":   { "text": "← W",    "index": 12 },
+              "WNW": { "text": "↖ WNW",  "index": 13 },
+              "NW":  { "text": "↖ NW",   "index": 14 },
+              "NNW": { "text": "↖ NNW",  "index": 15 },
+              "UNKNOWN": { "text": "? UNKNOWN", "index": 16 }
+            } }
+          ]
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Direction$/", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT windrichtung AS \"Direction\" FROM weather_records WHERE station_id IN ($station) ORDER BY received_at DESC LIMIT 1;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Precipitation (last reading)",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 11 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthmm",
+          "decimals": 1,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#73BF69", "value": null },
+              { "color": "#5794F2", "value": 0.1 },
+              { "color": "#3274D9", "value": 2 },
+              { "color": "#1F60C4", "value": 10 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", niederschlag FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Last Update",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 11 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "color": { "mode": "fixed", "fixedColor": "#8AB8FF" }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Updated$/", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT (EXTRACT(EPOCH FROM MAX(received_at)) * 1000)::bigint AS \"Updated\" FROM weather_records WHERE station_id IN ($station);",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 101,
+      "title": "Trends",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Temperature & Humidity",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "spanNulls": true,
+            "showPoints": "never",
+            "axisPlacement": "auto"
+          },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Temperature" },
+            "properties": [
+              { "id": "unit", "value": "celsius" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#FF9830" } },
+              { "id": "custom.axisPlacement", "value": "left" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Humidity" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#5794F2" } },
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["min", "max", "mean"] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", temperatur AS \"Temperature\", luftfeuchtigkeit AS \"Humidity\" FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Air Pressure",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "color": { "mode": "fixed", "fixedColor": "#B877D9" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["min", "max", "mean"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", luftdruck AS \"Pressure\" FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Wind Speed",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 27 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocitykmh",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "scheme",
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "color": { "mode": "continuous-GrYlRd" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["min", "max", "mean"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", windgeschwindigkeit AS \"Wind\" FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "barchart",
+      "title": "Wind Direction Distribution",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 27 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "continuous-BlPu" },
+          "custom": { "fillOpacity": 80, "lineWidth": 1, "gradientMode": "opacity" }
+        }
+      },
+      "options": {
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
+        "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT windrichtung AS \"Direction\", COUNT(*)::int AS \"Count\" FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) GROUP BY windrichtung ORDER BY array_position(ARRAY['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW','UNKNOWN'], windrichtung);",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Precipitation",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthmm",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 80,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "spanNulls": false,
+            "showPoints": "never"
+          },
+          "color": { "mode": "fixed", "fixedColor": "#3274D9" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["sum", "max"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", niederschlag AS \"Rainfall\" FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Brightness",
+      "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lux",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 35,
+            "gradientMode": "opacity",
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "color": { "mode": "fixed", "fixedColor": "#FADE2A" }
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["min", "max", "mean"] },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT received_at AS \"time\", helligkeit AS \"Brightness\" FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 102,
+      "title": "Recent Records",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "panels": [
+        {
+          "id": 15,
+          "type": "table",
+          "title": "Latest Readings",
+          "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 45 },
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "align": "auto", "displayMode": "auto" }
+            },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "temperatur" }, "properties": [{ "id": "unit", "value": "celsius" }, { "id": "decimals", "value": 1 }] },
+              { "matcher": { "id": "byName", "options": "luftfeuchtigkeit" }, "properties": [{ "id": "unit", "value": "percent" }, { "id": "decimals", "value": 0 }] },
+              { "matcher": { "id": "byName", "options": "luftdruck" }, "properties": [{ "id": "unit", "value": "pressurehpa" }, { "id": "decimals", "value": 1 }] },
+              { "matcher": { "id": "byName", "options": "niederschlag" }, "properties": [{ "id": "unit", "value": "lengthmm" }, { "id": "decimals", "value": 2 }] },
+              { "matcher": { "id": "byName", "options": "windgeschwindigkeit" }, "properties": [{ "id": "unit", "value": "velocitykmh" }, { "id": "decimals", "value": 1 }] },
+              { "matcher": { "id": "byName", "options": "helligkeit" }, "properties": [{ "id": "unit", "value": "lux" }, { "id": "decimals", "value": 0 }] }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "footer": { "show": false }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "postgres", "uid": "weatherstation-postgres" },
+              "rawQuery": true,
+              "format": "table",
+              "rawSql": "SELECT received_at, station_id, temperatur, luftfeuchtigkeit, luftdruck, niederschlag, windgeschwindigkeit, windrichtung, helligkeit FROM weather_records WHERE $__timeFilter(received_at) AND station_id IN ($station) ORDER BY received_at DESC LIMIT 100;",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

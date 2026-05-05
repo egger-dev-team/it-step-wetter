@@ -45,6 +45,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_PANELS_DISABLE_SANITIZE_HTML: "true"
       POSTGRES_DB: ${POSTGRES_DB:-weatherstation}
       POSTGRES_USER: ${POSTGRES_USER:-weather}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weather}
