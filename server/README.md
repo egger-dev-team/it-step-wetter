@@ -1,87 +1,111 @@
-# Weatherstation Local Server
+# Weatherstation Docker Stack
 
-FastAPI server for ESP8266 weather station uploads. It stores data in a local SQLite file and keeps a rolling 7-day history.
+This project runs a full local weather platform in Docker:
+
+- FastAPI API for ESP8266 uploads
+- PostgreSQL for persistence
+- Grafana for visualization
+
+The ESP sketch keeps using the legacy query upload format and does not need protocol changes.
+
+## Services
+
+- API: http://localhost:8000
+- API docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- Grafana: http://localhost:3000
+- PostgreSQL: localhost:5432
 
 ## Features
 
-- Compatible with original Wettermonster upload format (`GET /speichern.php`)
-- Supports modern JSON ingest (`POST /api/weather`)
-- Local SQLite file storage
-- Automatic retention cleanup (7 days default)
-- REST endpoints for latest and history
-- Built-in dashboard for local Wi-Fi access
+- Legacy ingest route for the ESP sketch: GET /speichern.php
+- JSON ingest route for future clients: POST /api/weather
+- 7-day rolling retention cleanup
+- Latest and history API endpoints
+- Pre-provisioned Grafana PostgreSQL datasource
+- Preloaded starter Grafana dashboard
 
-## Requirements
+## Prerequisites
 
-- Python 3.11+
-- uv (https://docs.astral.sh/uv/)
+- Docker Desktop with Compose enabled
 
-## Setup
+## Quick Start
 
-1. Open terminal in this folder:
+1. Copy environment template:
 
-```powershell
-cd c:\Users\user\Wetterstation\server
+```bash
+cd /c/Users/user/Wetterstation/server
+cp .env.docker.example .env
 ```
 
-2. Create virtual environment and install dependencies:
+2. Start the full stack:
 
-```powershell
-uv sync
+```bash
+docker compose up -d --build
 ```
 
-3. Optional: create `.env` from `.env.example` and adjust values.
+3. Verify health:
 
-## Run
-
-```powershell
-$env:WEATHER_SERVER_HOST="0.0.0.0"
-$env:WEATHER_SERVER_PORT="8000"
-$env:WEATHER_API_KEY="46885206"
-uv run weather-server
+```bash
+curl http://127.0.0.1:8000/health
 ```
 
-Then open from your LAN:
+4. Open Grafana:
 
-- Dashboard: `http://<PC-LAN-IP>:8000/`
-- Health: `http://<PC-LAN-IP>:8000/health`
-- API docs: `http://<PC-LAN-IP>:8000/docs`
+- URL: http://127.0.0.1:3000
+- Login with values from .env (default admin/admin)
 
-## API
+## ESP8266 Integration
 
-### Legacy GET ingest (ESP-compatible)
+In [Code-Wettermonster.ino](../Code-Wettermonster.ino), set:
 
-`GET /speichern.php?id=...&schluessel=...&temperatur=...&luftfeuchtigkeit=...&luftdruck=...&niederschlag=...&windgeschwindigkeit=...&windrichtung=...&helligkeit=...`
+- localServerHost to your PC LAN IP (for example 192.168.178.100)
+- localServerPort to 8000
 
-### JSON ingest
+Then flash the sketch. Data should appear in:
 
-`POST /api/weather`
+- API history endpoint
+- Grafana dashboard folder Weatherstation
 
-```json
-{
-  "station_id": "1356599",
-  "key": "46885206",
-  "temperatur": 20.3,
-  "luftfeuchtigkeit": 54.1,
-  "luftdruck": 1012.8,
-  "niederschlag": 0.0,
-  "windgeschwindigkeit": 2.4,
-  "windrichtung": "N",
-  "helligkeit": 3200.0
-}
+## API Routes
+
+- GET /speichern.php?id=...&schluessel=...&temperatur=...&luftfeuchtigkeit=...&luftdruck=...&niederschlag=...&windgeschwindigkeit=...&windrichtung=...&helligkeit=...
+- POST /api/weather
+- GET /api/weather/latest
+- GET /api/weather/latest?station_id=1356599
+- GET /api/weather/history?hours=24
+- GET /api/weather/history?hours=24&station_id=1356599
+
+## Operations
+
+Start:
+
+```bash
+docker compose up -d
 ```
 
-### Read endpoints
+Logs:
 
-- `GET /api/weather/latest`
-- `GET /api/weather/latest?station_id=1356599`
-- `GET /api/weather/history?hours=24`
-- `GET /api/weather/history?hours=24&station_id=1356599`
+```bash
+docker compose logs -f api
+docker compose logs -f db
+docker compose logs -f grafana
+```
 
-## Data file
+Stop:
 
-SQLite database path is controlled by `WEATHER_DB_PATH` (default `./data/weather.db`).
+```bash
+docker compose down
+```
 
-## Firewall note (Windows)
+Stop and remove volumes (resets DB and Grafana state):
 
-Allow inbound TCP on the configured port (default `8000`) for private networks, otherwise other devices on Wi-Fi cannot access the dashboard/API.
+```bash
+docker compose down -v
+```
+
+## Notes
+
+- This setup is clean-start PostgreSQL. No SQLite import is included.
+- Retention is controlled by WEATHER_RETENTION_DAYS (default 7).
+- For LAN access, allow inbound ports 8000 and 3000 on private networks.

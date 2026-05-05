@@ -1,7 +1,7 @@
 import asyncio
 import os
-from contextlib import asynccontextmanager
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -16,13 +16,16 @@ HOST = os.getenv("WEATHER_SERVER_HOST", "0.0.0.0")
 PORT = int(os.getenv("WEATHER_SERVER_PORT", "8000"))
 API_KEY = os.getenv("WEATHER_API_KEY", "46885206")
 RETENTION_DAYS = int(os.getenv("WEATHER_RETENTION_DAYS", "7"))
-DB_PATH = Path(os.getenv("WEATHER_DB_PATH", "./data/weather.db")).resolve()
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://weather:weather@db:5432/weatherstation",
+)
 CLEANUP_INTERVAL_SECONDS = 3600
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-storage = Storage(db_path=DB_PATH, retention_days=RETENTION_DAYS)
+storage = Storage(database_url=DATABASE_URL, retention_days=RETENTION_DAYS)
 
 
 async def cleanup_loop() -> None:
@@ -47,6 +50,8 @@ app = FastAPI(title="Weatherstation Local Server", lifespan=lifespan)
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    if not storage.ping():
+        raise HTTPException(status_code=503, detail="database unavailable")
     return {"status": "ok"}
 
 

@@ -23,11 +23,11 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 Adafruit_BMP280 bmp;
 
 
-const char* ssid = "test123";
-const char* password = "test";
+const char* ssid = "TP-Link_C667";
+const char* password = "67729821";
 const char* id = "1356599";
 const char* key = "46885206";
-const char* localServerHost = "192.168.178.100";
+const char* localServerHost = "192.168.1.107";
 const int localServerPort = 8000;
 const int interval = 5;
 
