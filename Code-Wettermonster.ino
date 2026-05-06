@@ -18,6 +18,7 @@
 #include <Adafruit_TSL2591.h>
 #include <Adafruit_Si7021.h>
 #include <Adafruit_BMP280.h>
+#include <math.h>
 
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591);
 Adafruit_Si7021 sensor = Adafruit_Si7021();
@@ -32,6 +33,15 @@ const char* localServerHost = "192.168.1.107";
 const int localServerPort = 8000;
 const int interval = 1;
 
+// Optional solar voltage measurement.
+// Keep disabled by default because A0 is currently used for wind direction.
+const bool enableSolarVoltage = false;
+// ESP8266 ADC input range is typically 0..1.0V on bare A0 pins.
+const float adcReferenceVoltage = 1.0;
+// Divider ratio: Vin = Vadc * dividerRatio.
+// Example: R1=100k (top), R2=10k (bottom) => ratio = (100+10)/10 = 11.0
+const float solarDividerRatio = 11.0;
+
 float temperature;
 float humidity;
 float pressure;
@@ -41,6 +51,7 @@ float windSpeed;
 float numRevsAnemometer;
 char* windDirection;
 float luminosity;
+float solarVoltage = NAN;
 volatile unsigned long previousTimeRain=0, previousTimeSpeed=0, delayTime=20;
 unsigned long lastMillis;
 
@@ -48,6 +59,12 @@ WiFiClient client;
 
 void ICACHE_RAM_ATTR countAnemometer();
 void ICACHE_RAM_ATTR countRain();
+
+float readSolarVoltageFromA0() {
+	int raw = analogRead(A0);
+	float vadc = (raw / 1023.0) * adcReferenceVoltage;
+	return vadc * solarDividerRatio;
+}
 
 void sendToWettermonster() {
 
@@ -82,6 +99,9 @@ void sendToWettermonster() {
 		Serial.print("Windgeschwindigkeit: "); Serial.print(windSpeed, 2); Serial.println(" km/h");
 		Serial.print("Windrichtung:        "); Serial.println(windDirection);
 		Serial.print("Helligkeit:          "); Serial.print(luminosity, 2); Serial.println(" lux");
+		if (isfinite(solarVoltage)) {
+			Serial.print("Spannung:            "); Serial.print(solarVoltage, 2); Serial.println(" V");
+		}
 		Serial.println("-------------------");
 
 		client.print("GET /speichern.php");
@@ -103,6 +123,10 @@ void sendToWettermonster() {
 		client.print(windDirection);
 		client.print("&helligkeit=");
 		client.print(luminosity);
+		if (isfinite(solarVoltage)) {
+			client.print("&spannung=");
+			client.print(solarVoltage, 2);
+		}
 		client.println(" HTTP/1.1");
 		client.print("Host: ");
 		client.print(localServerHost);
@@ -264,25 +288,32 @@ void readWeatherMeters() {
 	Percipitation = 0.2794 * (numClicksRain * 60 / interval);
 	numClicksRain = 0;
 
-	int windDirectionVoltage = analogRead(A0);
+	if (enableSolarVoltage) {
+		solarVoltage = readSolarVoltageFromA0();
+		windDirection = (char*)"UNKNOWN";
+	}
+	else {
+		solarVoltage = NAN;
+		int windDirectionVoltage = analogRead(A0);
 
-	if (windDirectionVoltage >= 212 && windDirectionVoltage < 273)    {windDirection = (char*)"N";}
-	else if (windDirectionVoltage >= 577 && windDirectionVoltage < 665) {windDirection = (char*)"NNE";}
-	else if (windDirectionVoltage >= 483 && windDirectionVoltage < 577) {windDirection = (char*)"NE";}
-	else if (windDirectionVoltage >= 929 && windDirectionVoltage < 943) {windDirection = (char*)"ENE";}
-	else if (windDirectionVoltage >= 906 && windDirectionVoltage < 929) {windDirection = (char*)"E";}
-	else if (windDirectionVoltage >= 943 && windDirectionVoltage < 1023){windDirection =(char*)"ESE";}
-	else if (windDirectionVoltage >= 795 && windDirectionVoltage < 858) {windDirection = (char*)"SE";}
-	else if (windDirectionVoltage >= 858 && windDirectionVoltage < 906) {windDirection = (char*)"SSE";}
-	else if (windDirectionVoltage >= 665 && windDirectionVoltage < 748) {windDirection = (char*)"S";}
-	else if (windDirectionVoltage >= 748 && windDirectionVoltage < 795) {windDirection = (char*)"SSW";}
-	else if (windDirectionVoltage >= 348 && windDirectionVoltage < 399) {windDirection = (char*)"SW";}
-	else if (windDirectionVoltage >= 399 && windDirectionVoltage < 483) {windDirection = (char*)"WSW";}
-	else if (windDirectionVoltage >= 0 && windDirectionVoltage < 106)   {windDirection = (char*)"W";}
-	else if (windDirectionVoltage >= 163 && windDirectionVoltage < 212) {windDirection = (char*)"WNW";}
-	else if (windDirectionVoltage >= 106 && windDirectionVoltage < 163) {windDirection = (char*)"NW";}
-	else if (windDirectionVoltage >= 273 && windDirectionVoltage < 348) {windDirection = (char*)"NNW";}
-	else {windDirection = (char*)"UNKNOWN";}
+		if (windDirectionVoltage >= 212 && windDirectionVoltage < 273)    {windDirection = (char*)"N";}
+		else if (windDirectionVoltage >= 577 && windDirectionVoltage < 665) {windDirection = (char*)"NNE";}
+		else if (windDirectionVoltage >= 483 && windDirectionVoltage < 577) {windDirection = (char*)"NE";}
+		else if (windDirectionVoltage >= 929 && windDirectionVoltage < 943) {windDirection = (char*)"ENE";}
+		else if (windDirectionVoltage >= 906 && windDirectionVoltage < 929) {windDirection = (char*)"E";}
+		else if (windDirectionVoltage >= 943 && windDirectionVoltage < 1023){windDirection =(char*)"ESE";}
+		else if (windDirectionVoltage >= 795 && windDirectionVoltage < 858) {windDirection = (char*)"SE";}
+		else if (windDirectionVoltage >= 858 && windDirectionVoltage < 906) {windDirection = (char*)"SSE";}
+		else if (windDirectionVoltage >= 665 && windDirectionVoltage < 748) {windDirection = (char*)"S";}
+		else if (windDirectionVoltage >= 748 && windDirectionVoltage < 795) {windDirection = (char*)"SSW";}
+		else if (windDirectionVoltage >= 348 && windDirectionVoltage < 399) {windDirection = (char*)"SW";}
+		else if (windDirectionVoltage >= 399 && windDirectionVoltage < 483) {windDirection = (char*)"WSW";}
+		else if (windDirectionVoltage >= 0 && windDirectionVoltage < 106)   {windDirection = (char*)"W";}
+		else if (windDirectionVoltage >= 163 && windDirectionVoltage < 212) {windDirection = (char*)"WNW";}
+		else if (windDirectionVoltage >= 106 && windDirectionVoltage < 163) {windDirection = (char*)"NW";}
+		else if (windDirectionVoltage >= 273 && windDirectionVoltage < 348) {windDirection = (char*)"NNW";}
+		else {windDirection = (char*)"UNKNOWN";}
+	}
 }
 
 void setup() {

@@ -92,6 +92,7 @@ def row_to_out(row) -> WeatherOut:
         windgeschwindigkeit=row["windgeschwindigkeit"],
         windrichtung=row["windrichtung"],
         helligkeit=row["helligkeit"],
+        spannung=row["spannung"],
         received_at=row["received_at"],
     )
 
@@ -141,6 +142,7 @@ def speichern_php(
     windgeschwindigkeit: float,
     windrichtung: str,
     helligkeit: float,
+    spannung: float | None = None,
 ) -> dict[str, str | int]:
     ensure_key(schluessel)
     payload = WeatherIn(
@@ -153,6 +155,7 @@ def speichern_php(
         windgeschwindigkeit=windgeschwindigkeit,
         windrichtung=windrichtung,
         helligkeit=helligkeit,
+        spannung=spannung,
     )
     row_id = storage.insert(payload)
     return {"status": "ok", "id": row_id}

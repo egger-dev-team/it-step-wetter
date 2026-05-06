@@ -36,8 +36,15 @@ class Storage:
                     windgeschwindigkeit DOUBLE PRECISION NOT NULL,
                     windrichtung TEXT NOT NULL,
                     helligkeit DOUBLE PRECISION NOT NULL,
+                    spannung DOUBLE PRECISION,
                     received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
+                """
+            )
+            conn.execute(
+                """
+                ALTER TABLE weather_records
+                ADD COLUMN IF NOT EXISTS spannung DOUBLE PRECISION
                 """
             )
             conn.execute(
@@ -61,8 +68,8 @@ class Storage:
                 INSERT INTO weather_records (
                     station_id, temperatur, luftfeuchtigkeit, luftdruck,
                     niederschlag, windgeschwindigkeit, windrichtung,
-                    helligkeit
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    helligkeit, spannung
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
@@ -74,6 +81,7 @@ class Storage:
                     payload.windgeschwindigkeit,
                     payload.windrichtung,
                     payload.helligkeit,
+                    payload.spannung,
                 ),
             ).fetchone()
             conn.commit()

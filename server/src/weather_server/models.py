@@ -34,6 +34,7 @@ class WeatherIn(BaseModel):
     windgeschwindigkeit: float = Field(ge=0, le=200)
     windrichtung: str = Field(min_length=1, max_length=16)
     helligkeit: float = Field(ge=0, le=300000)
+    spannung: float | None = Field(default=None, ge=0, le=100)
 
     @field_validator("windrichtung")
     @classmethod
@@ -54,6 +55,7 @@ class WeatherOut(BaseModel):
     windgeschwindigkeit: float
     windrichtung: str
     helligkeit: float
+    spannung: float | None = None
     received_at: datetime
 
 
