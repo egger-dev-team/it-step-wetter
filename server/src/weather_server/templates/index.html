@@ -202,11 +202,28 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
 
+    #forecast-grid {
+      gap: 8px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
     .metric {
       padding: 10px;
       border-radius: 10px;
       border: 1px solid var(--line);
       background: #fbfcfc;
+    }
+
+    .forecast-metric {
+      padding: 8px;
+    }
+
+    .forecast-metric .value {
+      font-size: 1.05rem;
+    }
+
+    .forecast-metric .hint {
+      font-size: 0.8rem;
     }
 
     .metric b {
@@ -398,24 +415,11 @@
       padding-top: 10px;
     }
 
-    .moon-forecast-status {
-      margin-bottom: 8px;
-    }
-
-    .moon-forecast-grid {
-      display: grid;
-      gap: 8px;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    }
-
-    .moon-forecast-item {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 8px;
-      background: #fbfcfc;
-    }
-
     @media (max-width: 700px) {
+      #forecast-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+
       .moon-next { text-align: left; }
     }
   </style>
@@ -510,21 +514,19 @@
       <span class="pill" data-i18n="next24Forecast">Next 24 h Forecast</span>
       <div id="forecast-status" class="hint" style="margin-top: 8px;" data-i18n="loadingForecast">Loading forecast...</div>
       <div id="forecast-grid" class="grid" style="margin-top: 10px; display: none;"></div>
+    </section>
+
+    <section class="card">
       <span class="pill" data-i18n="moonCalendar">Moon Calendar</span>
       <div class="moon-head">
         <div class="moon-now">
           <span id="moon-symbol" class="moon-symbol" aria-hidden="true">◑</span>
           <div>
-            <div id="moon-phase" class="moon-phase" data-i18n="loadingForecast">Loading...</div>
+            <div id="moon-phase" class="moon-phase">Loading...</div>
             <div id="moon-illum" class="moon-illum"><span data-i18n="moonIllumination">Illumination</span>: -</div>
           </div>
         </div>
         <div id="moon-next" class="moon-next"><span data-i18n="nextFullMoon">Next full moon</span>: -<br><span data-i18n="nextNewMoon">Next new moon</span>: -</div>
-      </div>
-      <div class="moon-forecast">
-        <div class="pill" data-i18n="weatherMoonOutlook">Weather + Moon Outlook</div>
-        <div id="forecast-status" class="hint moon-forecast-status" data-i18n="loadingForecast">Loading forecast...</div>
-        <div id="forecast-grid" class="moon-forecast-grid" style="display: none;"></div>
       </div>
     </section>
     </div>
@@ -600,6 +602,7 @@
         generatedAt: "Generated {when}",
         forecastUnavailable: "Forecast unavailable ({status}): {detail}",
         forecastError: "Forecast error: {err}",
+        none: "Dry",
         dry: "Dry",
         rain: "Rain",
         snow: "Snow",
@@ -626,7 +629,6 @@
         moonIllumination: "Illumination",
         nextFullMoon: "Next full moon",
         nextNewMoon: "Next new moon",
-        weatherMoonOutlook: "Weather + Moon Outlook",
         moonNewMoon: "New Moon",
         moonWaxingCrescent: "Waxing Crescent",
         moonFirstQuarter: "First Quarter",
@@ -669,6 +671,7 @@
         generatedAt: "Erstellt {when}",
         forecastUnavailable: "Prognose nicht verfuegbar ({status}): {detail}",
         forecastError: "Prognosefehler: {err}",
+        none: "Trocken",
         dry: "Trocken",
         rain: "Regen",
         snow: "Schnee",
@@ -695,7 +698,6 @@
         moonIllumination: "Ausleuchtung",
         nextFullMoon: "Naechster Vollmond",
         nextNewMoon: "Naechster Neumond",
-        weatherMoonOutlook: "Wetter + Mond Ausblick",
         moonNewMoon: "Neumond",
         moonWaxingCrescent: "Zunehmende Sichel",
         moonFirstQuarter: "Erstes Viertel",
@@ -1154,19 +1156,22 @@
           return;
         }
         const data = await res.json();
-        grid.innerHTML = data.horizons.map((h) => {
+        const items = data.horizons.map((h) => {
           const probs = h.probabilities || {};
           const top = h.label;
           const pct = ((probs[top] ?? 0) * 100).toFixed(0);
           const icon = FORECAST_ICONS[top] ?? "?";
           const label = t(top) || top;
           const breakdown = data.class_labels
-            .map((c) => `${t(c) || c}: ${((probs[c] ?? 0) * 100).toFixed(0)}%`)
+            .map((c) => `${FORECAST_ICONS[c] ?? "?"} ${((probs[c] ?? 0) * 100).toFixed(0)}%`)
             .join(" · ");
-          return `<div class="moon-forecast-item">
-            <b>+${h.horizon_hours} h</b>
-            <div class="value">${icon} ${label} (${pct}%)</div>
-            <div class="hint" style="margin-top: 4px;">${breakdown}</div>
+          return { horizon: h.horizon_hours, icon, label, pct, breakdown };
+        });
+        grid.innerHTML = items.map((item) => {
+          return `<div class="metric forecast-metric">
+            <b>+${item.horizon} h</b>
+            <div class="value">${item.icon} ${item.label} (${item.pct}%)</div>
+            <div class="hint" style="margin-top: 4px;">${item.breakdown}</div>
           </div>`;
         }).join("");
         const generated = new Date(data.generated_at).toLocaleString();
