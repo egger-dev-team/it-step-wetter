@@ -1,69 +1,177 @@
-# Wetterstation Local App
+# Weatherstation Docker Stack
 
-## What this app does
+This project runs a full local weather platform in Docker:
 
-This project turns your ESP8266 weather station into a local-first system.
+- FastAPI API for ESP8266 uploads
+- PostgreSQL for persistence
+- Grafana for visualization
 
-- The station reads temperature, humidity, pressure, rain, wind speed, wind direction, and light.
-- The station sends measurements over your local Wi-Fi to your own PC.
-- A FastAPI server receives and validates the data.
-- Data is saved in a local SQLite file.
-- History is kept for 7 days with automatic cleanup.
-- Data is available as JSON API endpoints and as a browser dashboard.
+The ESP sketch keeps using the legacy query upload format and does not need protocol changes.
 
-## Project structure
+For a technical architecture overview with a system diagram, see [server/architecture.md](architecture.md).
 
-- `Code-Wettermonster.ino`
-  - Arduino sketch for the ESP8266 weather station.
-  - Upload target has been changed from cloud upload to your local server.
-- `server/`
-  - FastAPI application managed with uv.
-  - Includes API, storage layer, retention logic, and dashboard.
+## Services
 
-## How data flows
+- API: http://localhost:8000
+- API docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- Grafana: http://localhost:3000
+- PostgreSQL: localhost:5432
 
-1. ESP8266 sensors are read every configured interval.
-2. ESP8266 sends data to the local endpoint (`/speichern.php`) on your PC.
-3. FastAPI writes each record into SQLite.
-4. Background cleanup removes records older than 7 days.
-5. Clients on the same Wi-Fi can open the dashboard or call the API.
+## Features
 
-## Main features
-
-- Local network operation (no external cloud required)
-- Legacy-compatible ingest route for the existing ESP sketch
-- Optional JSON ingest route for future improvements
+- Legacy ingest route for the ESP sketch: GET /speichern.php
+- JSON ingest route for future clients: POST /api/weather
+- 7-day rolling retention cleanup
 - Latest and history API endpoints
-- Simple dashboard for desktop and mobile browsers
+- Pre-provisioned Grafana PostgreSQL datasource
+- Preloaded starter Grafana dashboard
 
-## Running the server
+## Prerequisites
 
-Use Git Bash (recommended in your setup):
+- Docker Desktop with Compose enabled
 
-1. `cd /c/Users/user/Wetterstation/server`
-2. `uv sync`
-3. `export WEATHER_API_KEY=46885206`
-4. `uv run weather-server`
+## Quick Start
 
-Then open:
+1. Copy environment template:
 
-- Dashboard: `http://<PC-LAN-IP>:8000/`
-- Health check: `http://<PC-LAN-IP>:8000/health`
+```bash
+# PowerShell (Windows)
+cd C:/Users/user/Wetterstation/server
+Copy-Item .env.docker.example .env
 
-## Important configuration
+# Bash
+cd /c/Users/user/Wetterstation/server
+cp .env.docker.example .env
+```
 
-- Set your real PC LAN IP in `Code-Wettermonster.ino`:
-  - `localServerHost`
-  - `localServerPort` (default 8000)
-- Keep API key in sketch and server aligned.
-- Allow inbound traffic on the server port in Windows Firewall for private networks.
+2. Start the full stack:
 
-## Where data is stored
+```bash
+docker compose up -d --build
+```
 
-- Default database file: `server/data/weather.db`
-- Retention window: 7 days (configurable by environment variable)
+3. Verify health:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+4. Open Grafana:
+
+- URL: http://127.0.0.1:3000
+- Login with values from .env (default admin/admin)
+
+## ESP8266 Integration
+
+In [Code-Wettermonster.ino](../Code-Wettermonster.ino), set:
+
+- localServerHost to your PC LAN IP (for example 192.168.178.100)
+- localServerPort to 8000
+
+Then flash the sketch. Data should appear in:
+
+- API history endpoint
+- Grafana dashboard folder Weatherstation
+
+## API Routes
+
+- GET /speichern.php?id=...&schluessel=...&temperatur=...&luftfeuchtigkeit=...&luftdruck=...&niederschlag=...&windgeschwindigkeit=...&windrichtung=...&helligkeit=...
+- POST /api/weather
+- GET /api/weather/latest
+- GET /api/weather/latest?station_id=1356599
+- GET /api/weather/history?hours=24
+- GET /api/weather/history?hours=24&station_id=1356599
+- GET /api/stations
+- GET /api/forecast — 1/3/6/12/24 h precipitation-type forecast (none / rain / snow)
+
+## Forecast model
+
+A simple precipitation-type forecaster (3 classes: none / rain / snow) is
+trained offline from ERA5 reanalysis data (Open-Meteo Archive) for a grid
+point near Sankt Johann in Tirol. The trained model is loaded at startup
+and exposed via `GET /api/forecast`.
+
+Re-train (one-off, takes ~1 min):
+
+```bash
+# 1. Download ~10 years of hourly history (free, no API key)
+uv run python scripts/download_history.py --start 2016-01-01 --end 2025-12-31
+
+# 2. Train model bundle to data/models/forecast_v1.joblib
+uv run python scripts/train_forecast.py
+```
+
+Override coordinates with `--lat` / `--lon` if you want a different grid
+point. Restart the API container after retraining.
+
+Forecast uses two different thresholds:
+
+- `WEATHER_FORECAST_HISTORY_HOURS` (env var, default `12`) controls how many
+	recent hours the API fetches from the database before calling the model.
+- `MIN_HISTORY_HOURS` (internal constant, currently `6`) is the minimum usable
+	span inside feature generation, which effectively means at least `7` hourly
+	buckets after resampling.
+
+Rule of thumb: keep `WEATHER_FORECAST_HISTORY_HOURS >= 7` (default `12` is a
+safe buffer). If the available data does not meet the minimum, `/api/forecast`
+returns 503.
+
+## Operations
+
+Start:
+
+```bash
+docker compose up -d
+```
+
+Logs:
+
+```bash
+docker compose logs -f api
+docker compose logs -f db
+docker compose logs -f grafana
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
+Stop and remove volumes (resets DB and Grafana state):
+
+```bash
+docker compose down -v
+```
+
+## Simulate a second station
+
+Use the included simulator to push realistic sample data from a virtual second station.
+
+Run a short burst test:
+
+```bash
+uv run python scripts/simulate_station.py --station-id sim-station-2 --count 20 --interval 2
+```
+
+Run continuously (default 15-second interval):
+
+```bash
+uv run python scripts/simulate_station.py --station-id sim-station-2
+```
+
+Common options:
+
+- `--base-url` API base URL (default `http://127.0.0.1:8000`)
+- `--api-key` shared API key (default `46885206`)
+- `--interval` seconds between sends
+- `--count` number of messages (`0` means infinite)
+
+This is useful when the physical station is not available and you still want dashboard activity.
 
 ## Notes
 
-- If `uv sync` reports file lock errors, stop any running server process and retry.
-- For best reliability, keep the PC and ESP8266 on the same Wi-Fi subnet.
+- This setup is clean-start PostgreSQL. No SQLite import is included.
+- Retention is controlled by WEATHER_RETENTION_DAYS (default 7).
+- For LAN access, allow inbound ports 8000 and 3000 on private networks.
