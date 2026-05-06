@@ -34,6 +34,11 @@ The ESP sketch keeps using the legacy query upload format and does not need prot
 1. Copy environment template:
 
 ```bash
+# PowerShell (Windows)
+cd C:/Users/user/Wetterstation/server
+Copy-Item .env.docker.example .env
+
+# Bash
 cd /c/Users/user/Wetterstation/server
 cp .env.docker.example .env
 ```
@@ -75,6 +80,7 @@ Then flash the sketch. Data should appear in:
 - GET /api/weather/latest?station_id=1356599
 - GET /api/weather/history?hours=24
 - GET /api/weather/history?hours=24&station_id=1356599
+- GET /api/stations
 - GET /api/forecast — 1/3/6/12/24 h precipitation-type forecast (none / rain / snow)
 
 ## Forecast model
@@ -97,8 +103,17 @@ uv run python scripts/train_forecast.py
 Override coordinates with `--lat` / `--lon` if you want a different grid
 point. Restart the API container after retraining.
 
-The forecast endpoint requires at least 6 h of recent station readings in
-the database; otherwise it returns 503.
+Forecast uses two different thresholds:
+
+- `WEATHER_FORECAST_HISTORY_HOURS` (env var, default `12`) controls how many
+	recent hours the API fetches from the database before calling the model.
+- `MIN_HISTORY_HOURS` (internal constant, currently `6`) is the minimum usable
+	span inside feature generation, which effectively means at least `7` hourly
+	buckets after resampling.
+
+Rule of thumb: keep `WEATHER_FORECAST_HISTORY_HOURS >= 7` (default `12` is a
+safe buffer). If the available data does not meet the minimum, `/api/forecast`
+returns 503.
 
 ## Operations
 
@@ -135,13 +150,13 @@ Use the included simulator to push realistic sample data from a virtual second s
 Run a short burst test:
 
 ```bash
-python scripts/simulate_station.py --station-id sim-station-2 --count 20 --interval 2
+uv run python scripts/simulate_station.py --station-id sim-station-2 --count 20 --interval 2
 ```
 
 Run continuously (default 15-second interval):
 
 ```bash
-python scripts/simulate_station.py --station-id sim-station-2
+uv run python scripts/simulate_station.py --station-id sim-station-2
 ```
 
 Common options:
