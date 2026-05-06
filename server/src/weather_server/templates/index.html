@@ -510,20 +510,20 @@
       <span class="pill" data-i18n="next24Forecast">Next 24 h Forecast</span>
       <div id="forecast-status" class="hint" style="margin-top: 8px;" data-i18n="loadingForecast">Loading forecast...</div>
       <div id="forecast-grid" class="grid" style="margin-top: 10px; display: none;"></div>
-      <span class="pill">Moon Calendar</span>
+      <span class="pill" data-i18n="moonCalendar">Moon Calendar</span>
       <div class="moon-head">
         <div class="moon-now">
           <span id="moon-symbol" class="moon-symbol" aria-hidden="true">◑</span>
           <div>
-            <div id="moon-phase" class="moon-phase">Loading...</div>
-            <div id="moon-illum" class="moon-illum">Illumination: -</div>
+            <div id="moon-phase" class="moon-phase" data-i18n="loadingForecast">Loading...</div>
+            <div id="moon-illum" class="moon-illum"><span data-i18n="moonIllumination">Illumination</span>: -</div>
           </div>
         </div>
-        <div id="moon-next" class="moon-next">Next full moon: -<br>Next new moon: -</div>
+        <div id="moon-next" class="moon-next"><span data-i18n="nextFullMoon">Next full moon</span>: -<br><span data-i18n="nextNewMoon">Next new moon</span>: -</div>
       </div>
       <div class="moon-forecast">
-        <div class="pill">Weather + Moon Outlook</div>
-        <div id="forecast-status" class="hint moon-forecast-status">Loading forecast...</div>
+        <div class="pill" data-i18n="weatherMoonOutlook">Weather + Moon Outlook</div>
+        <div id="forecast-status" class="hint moon-forecast-status" data-i18n="loadingForecast">Loading forecast...</div>
         <div id="forecast-grid" class="moon-forecast-grid" style="display: none;"></div>
       </div>
     </section>
@@ -621,7 +621,20 @@
         moodCloudy: "cloudy",
         moodClearNight: "clear night",
         moodDusk: "dusk",
-        moodSunny: "sunny"
+        moodSunny: "sunny",
+        moonCalendar: "Moon Calendar",
+        moonIllumination: "Illumination",
+        nextFullMoon: "Next full moon",
+        nextNewMoon: "Next new moon",
+        weatherMoonOutlook: "Weather + Moon Outlook",
+        moonNewMoon: "New Moon",
+        moonWaxingCrescent: "Waxing Crescent",
+        moonFirstQuarter: "First Quarter",
+        moonWaxingGibbous: "Waxing Gibbous",
+        moonFullMoon: "Full Moon",
+        moonWaningGibbous: "Waning Gibbous",
+        moonLastQuarter: "Last Quarter",
+        moonWaningCrescent: "Waning Crescent"
       },
       de: {
         pageTitle: "Wetterstation St. Johann in Tirol",
@@ -677,7 +690,20 @@
         moodCloudy: "bewoelkt",
         moodClearNight: "klare Nacht",
         moodDusk: "Daemmerung",
-        moodSunny: "sonnig"
+        moodSunny: "sonnig",
+        moonCalendar: "Mondkalender",
+        moonIllumination: "Ausleuchtung",
+        nextFullMoon: "Naechster Vollmond",
+        nextNewMoon: "Naechster Neumond",
+        weatherMoonOutlook: "Wetter + Mond Ausblick",
+        moonNewMoon: "Neumond",
+        moonWaxingCrescent: "Zunehmende Sichel",
+        moonFirstQuarter: "Erstes Viertel",
+        moonWaxingGibbous: "Zunehmend Gibbous",
+        moonFullMoon: "Vollmond",
+        moonWaningGibbous: "Abnehmend Gibbous",
+        moonLastQuarter: "Letztes Viertel",
+        moonWaningCrescent: "Abnehmende Sichel"
       }
     };
 
@@ -961,15 +987,15 @@
       const cycle = (2 * Math.PI * age) / SYNODIC_MONTH;
       const illumination = (1 - Math.cos(cycle)) / 2;
 
-      if (age < 1.84566) return { name: "New Moon", symbol: "●", illumination };
-      if (age < 5.53699) return { name: "Waxing Crescent", symbol: "◔", illumination };
-      if (age < 9.22831) return { name: "First Quarter", symbol: "◑", illumination };
-      if (age < 12.91963) return { name: "Waxing Gibbous", symbol: "◕", illumination };
-      if (age < 16.61096) return { name: "Full Moon", symbol: "○", illumination };
-      if (age < 20.30228) return { name: "Waning Gibbous", symbol: "◕", illumination };
-      if (age < 23.99361) return { name: "Last Quarter", symbol: "◐", illumination };
-      if (age < 27.68493) return { name: "Waning Crescent", symbol: "◓", illumination };
-      return { name: "New Moon", symbol: "●", illumination };
+      if (age < 1.84566) return { nameKey: "moonNewMoon", symbol: "●", illumination };
+      if (age < 5.53699) return { nameKey: "moonWaxingCrescent", symbol: "◔", illumination };
+      if (age < 9.22831) return { nameKey: "moonFirstQuarter", symbol: "◑", illumination };
+      if (age < 12.91963) return { nameKey: "moonWaxingGibbous", symbol: "◕", illumination };
+      if (age < 16.61096) return { nameKey: "moonFullMoon", symbol: "○", illumination };
+      if (age < 20.30228) return { nameKey: "moonWaningGibbous", symbol: "◕", illumination };
+      if (age < 23.99361) return { nameKey: "moonLastQuarter", symbol: "◐", illumination };
+      if (age < 27.68493) return { nameKey: "moonWaningCrescent", symbol: "◓", illumination };
+      return { nameKey: "moonNewMoon", symbol: "●", illumination };
     }
 
     function findNextPhaseDate(fromDate, target) {
@@ -998,14 +1024,14 @@
       const nextEl = document.getElementById("moon-next");
 
       symbolEl.textContent = phase.symbol;
-      phaseEl.textContent = phase.name;
-      illumEl.textContent = `Illumination: ${(phase.illumination * 100).toFixed(0)}%`;
+      phaseEl.textContent = t(phase.nameKey);
+      illumEl.innerHTML = `<span data-i18n="moonIllumination">${t("moonIllumination")}</span>: ${(phase.illumination * 100).toFixed(0)}%`;
 
       const nextFull = findNextPhaseDate(now, "full");
       const nextNew = findNextPhaseDate(now, "new");
       const fullText = nextFull ? MOON_DATE_FMT.format(nextFull) : "-";
       const newText = nextNew ? MOON_DATE_FMT.format(nextNew) : "-";
-      nextEl.innerHTML = `Next full moon: ${fullText}<br>Next new moon: ${newText}`;
+      nextEl.innerHTML = `<span data-i18n="nextFullMoon">${t("nextFullMoon")}</span>: ${fullText}<br><span data-i18n="nextNewMoon">${t("nextNewMoon")}</span>: ${newText}`;
     }
 
     // ---------- Wilder Kaiser scene ----------
@@ -1174,6 +1200,7 @@
         applyTranslations();
         loadLatest();
         loadForecast();
+        renderMoonCalendar();
         const rawActive = document.getElementById("tab-raw").classList.contains("active");
         if (rawActive) loadHistory();
         applyScene();
