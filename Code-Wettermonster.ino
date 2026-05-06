@@ -99,8 +99,15 @@ void sendToWettermonster() {
 		Serial.print("Windgeschwindigkeit: "); Serial.print(windSpeed, 2); Serial.println(" km/h");
 		Serial.print("Windrichtung:        "); Serial.println(windDirection);
 		Serial.print("Helligkeit:          "); Serial.print(luminosity, 2); Serial.println(" lux");
+		Serial.print("Spannung:            ");
 		if (isfinite(solarVoltage)) {
-			Serial.print("Spannung:            "); Serial.print(solarVoltage, 2); Serial.println(" V");
+			Serial.print(solarVoltage, 2); Serial.println(" V");
+		}
+		else if (enableSolarVoltage) {
+			Serial.println("Messung nicht verfuegbar");
+		}
+		else {
+			Serial.println("deaktiviert (A0 fuer Windrichtung)");
 		}
 		Serial.println("-------------------");
 
