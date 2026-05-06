@@ -96,6 +96,40 @@ def row_to_out(row) -> WeatherOut:
     )
 
 
+def build_weather_summary(latest_row) -> str:
+    if not latest_row:
+        return (
+            "No live readings are available right now. "
+            "As soon as the station sends data, this section will describe current conditions."
+        )
+
+    temp = latest_row["temperatur"]
+    humidity = latest_row["luftfeuchtigkeit"]
+    pressure = latest_row["luftdruck"]
+    rain = latest_row["niederschlag"]
+    wind = latest_row["windgeschwindigkeit"]
+    direction = latest_row["windrichtung"]
+    light = latest_row["helligkeit"]
+
+    if rain > 0.2:
+        condition = "Rain is currently falling"
+    elif humidity >= 92 and wind < 2:
+        condition = "The air feels foggy and damp"
+    elif light < 3000:
+        condition = "Skies look mostly cloudy right now"
+    else:
+        condition = "Conditions look mostly clear at the moment"
+
+    light_desc = "bright" if light >= 20000 else "muted"
+    temp_feel = "mild" if temp >= 10 else "cool" if temp >= 3 else "cold"
+
+    return (
+        f"{condition} at {temp:.1f} C with {humidity:.0f}% humidity. "
+        f"Wind from {direction} is blowing at {wind:.1f} m/s while pressure holds near {pressure:.0f} hPa. "
+        f"Overall it feels {temp_feel}, with {light_desc} daylight and {rain:.2f} mm of recent precipitation."
+    )
+
+
 @app.get("/speichern.php")
 def speichern_php(
     id: str,
@@ -200,7 +234,10 @@ def dashboard(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"latest": latest_row},
+        context={
+            "latest": latest_row,
+            "weather_summary": build_weather_summary(latest_row),
+        },
     )
 
 
