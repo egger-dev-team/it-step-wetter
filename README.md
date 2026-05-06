@@ -6,9 +6,7 @@ This project runs a full local weather platform in Docker:
 - PostgreSQL for persistence
 - Grafana for visualization
 
-The ESP sketch keeps using the legacy query upload format and does not need protocol changes.
-
-For a technical architecture overview with a system diagram, see [server/architecture.md](architecture.md).
+For a technical architecture overview with a system diagram, see [architecture.md](server/architecture.md).
 
 ## Services
 
