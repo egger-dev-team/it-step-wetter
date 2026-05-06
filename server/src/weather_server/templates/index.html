@@ -418,7 +418,7 @@
         <div class="metric"><b>Rain</b><div class="value">{{ '%.2f'|format(latest['niederschlag']) }} mm</div></div>
         <div class="metric"><b>Wind</b><div class="value">{{ '%.2f'|format(latest['windgeschwindigkeit']) }} m/s {{ latest['windrichtung'] }}</div></div>
         <div class="metric"><b>Light</b><div class="value">{{ '%.0f'|format(latest['helligkeit']) }} lx</div></div>
-        <div class="metric"><b>Voltage</b><div class="value">{% if latest['spannung'] is not none %}{{ '%.2f'|format(latest['spannung']) }} V{% else %}-{% endif %}</div></div>
+        <div class="metric"><b>Voltage</b><div class="value">{% if latest['spannung'] is not none %}{{ '%.2f'|format(latest['spannung']) }} V{% else %}Not available{% endif %}</div></div>
         <div class="metric"><b>Last received</b><div class="value" data-ts="{{ latest['received_at'] }}">{{ latest['received_at'] }}</div></div>
       {% endif %}
       </div>
@@ -580,7 +580,7 @@
         <div class="metric"><b>Rain</b><div class="value">${fmt(row.niederschlag,2)} mm</div></div>
         <div class="metric"><b>Wind</b><div class="value">${fmt(row.windgeschwindigkeit,2)} m/s ${row.windrichtung}</div></div>
         <div class="metric"><b>Light</b><div class="value">${fmt(row.helligkeit,0)} lx</div></div>
-        <div class="metric"><b>Voltage</b><div class="value">${row.spannung == null ? "-" : `${fmt(row.spannung,2)} V`}</div></div>
+        <div class="metric"><b>Voltage</b><div class="value">${row.spannung == null ? "Not available" : `${fmt(row.spannung,2)} V`}</div></div>
         <div class="metric"><b>Last received</b><div class="value">${formatTimestamp(row.received_at)}</div></div>`;
       if (summary) summary.textContent = buildWeatherSummary(row);
     }
@@ -641,7 +641,7 @@
         <td>${formatValue(item.niederschlag, 2)} mm</td>
         <td>${formatValue(item.windgeschwindigkeit, 2)} m/s ${item.windrichtung}</td>
         <td>${formatValue(item.helligkeit, 0)} lx</td>
-        <td>${item.spannung == null ? "-" : `${formatValue(item.spannung, 2)} V`}</td>
+        <td>${item.spannung == null ? "Not available" : `${formatValue(item.spannung, 2)} V`}</td>
       </tr>`;
     }
 
