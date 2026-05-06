@@ -119,3 +119,15 @@ class Storage:
 
         with self.connect() as conn:
             return conn.execute(query, tuple(params)).fetchall()
+
+    def stations(self):
+        with self.connect() as conn:
+            return conn.execute(
+                """
+                SELECT station_id, MAX(received_at) AS last_seen,
+                       COUNT(*) AS sample_count
+                FROM weather_records
+                GROUP BY station_id
+                ORDER BY last_seen DESC
+                """
+            ).fetchall()

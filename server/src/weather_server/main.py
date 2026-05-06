@@ -143,6 +143,18 @@ def history(
     return [row_to_out(row) for row in rows]
 
 
+@app.get("/api/stations")
+def stations() -> list[dict]:
+    return [
+        {
+            "station_id": row["station_id"],
+            "last_seen": row["last_seen"].isoformat() if row["last_seen"] else None,
+            "sample_count": int(row["sample_count"]),
+        }
+        for row in storage.stations()
+    ]
+
+
 @app.get("/api/forecast", response_model=ForecastResponse)
 def forecast(station_id: str | None = None) -> ForecastResponse:
     if not forecaster.is_available:

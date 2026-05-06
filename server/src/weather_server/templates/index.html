@@ -151,6 +151,58 @@
       border-radius: 8px;
       padding: 10px;
     }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: -1px;
+    }
+
+    .tab:hover { color: var(--ink); background: #eef3f3; }
+
+    .tab.active {
+      color: var(--accent);
+      background: var(--paper);
+      border-color: var(--line);
+      border-bottom-color: var(--paper);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      min-width: 180px;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+
+    .station-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .station-bar label { color: var(--muted); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -158,10 +210,24 @@
     <h1>Weatherstation Local Server</h1>
     <p class="sub">Data is stored locally (rolling 7 days) and available over your Wi-Fi network.</p>
 
+    <div class="tabs" role="tablist">
+      <button class="tab active" type="button" role="tab" data-tab="overview">Overview</button>
+      <button class="tab" type="button" role="tab" data-tab="raw">Raw Data</button>
+    </div>
+
+    <div class="station-bar">
+      <label for="station-select">Station</label>
+      <select id="station-select">
+        <option value="" disabled selected>Loading…</option>
+      </select>
+      <span id="station-meta" class="hint" style="margin: 0;"></span>
+    </div>
+
+    <div id="tab-overview" class="tab-panel active" role="tabpanel">
     <section class="card">
       <span class="pill">Latest Reading</span>
+      <div id="latest-grid" class="grid" style="margin-top: 10px;">
       {% if latest %}
-      <div class="grid" style="margin-top: 10px;">
         <div class="metric"><b>Station</b><div class="value">{{ latest['station_id'] }}</div></div>
         <div class="metric"><b>Temperature</b><div class="value">{{ '%.1f'|format(latest['temperatur']) }} C</div></div>
         <div class="metric"><b>Humidity</b><div class="value">{{ '%.1f'|format(latest['luftfeuchtigkeit']) }} %</div></div>
@@ -169,10 +235,11 @@
         <div class="metric"><b>Rain</b><div class="value">{{ '%.2f'|format(latest['niederschlag']) }} mm</div></div>
         <div class="metric"><b>Wind</b><div class="value">{{ '%.2f'|format(latest['windgeschwindigkeit']) }} m/s {{ latest['windrichtung'] }}</div></div>
         <div class="metric"><b>Light</b><div class="value">{{ '%.0f'|format(latest['helligkeit']) }} lx</div></div>
-        <div class="metric"><b>Received</b><div class="value">{{ latest['received_at'] }}</div></div>
+        <div class="metric"><b>Last received</b><div class="value" data-ts="{{ latest['received_at'] }}">{{ latest['received_at'] }}</div></div>
+      {% endif %}
       </div>
-      {% else %}
-      <p class="warning">No data yet. Start the weather station upload and reload this page.</p>
+      {% if not latest %}
+      <p class="warning" id="latest-empty">No data yet. Start the weather station upload and reload this page.</p>
       {% endif %}
     </section>
 
@@ -181,13 +248,13 @@
       <div id="forecast-status" class="hint" style="margin-top: 8px;">Loading forecast...</div>
       <div id="forecast-grid" class="grid" style="margin-top: 10px; display: none;"></div>
     </section>
+    </div>
 
+    <div id="tab-raw" class="tab-panel" role="tabpanel">
     <section class="card">
       <div class="toolbar">
         <label for="hours">Hours</label>
         <input id="hours" type="number" min="1" max="168" value="24">
-        <label for="station">Station (optional)</label>
-        <input id="station" type="text" placeholder="station id">
         <button id="load">Load History</button>
       </div>
       <div class="hint">API endpoint: /api/weather/history</div>
@@ -195,7 +262,7 @@
         <table>
           <thead>
             <tr>
-              <th>Received</th>
+              <th>Last received</th>
               <th>Station</th>
               <th>Temp</th>
               <th>Humidity</th>
@@ -209,6 +276,7 @@
         </table>
       </div>
     </section>
+    </div>
   </div>
 
   <script>
@@ -218,9 +286,129 @@
       return n.toFixed(digits);
     }
 
+    const DATE_FMT = new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    function formatTimestamp(value) {
+      if (!value) return "-";
+      let s = String(value).trim();
+      // Treat naive timestamps (no timezone) as UTC, matching server storage.
+      if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) s = s.replace(" ", "T") + "Z";
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return DATE_FMT.format(d);
+    }
+
+    document.querySelectorAll("[data-ts]").forEach((el) => {
+      el.textContent = formatTimestamp(el.getAttribute("data-ts"));
+    });
+
+    const STATION_KEY = "weatherstation.selectedStation";
+    const stationSelect = document.getElementById("station-select");
+    const stationMeta = document.getElementById("station-meta");
+
+    function currentStation() {
+      return stationSelect.value || "";
+    }
+
+    function withStation(qs) {
+      const s = currentStation();
+      if (s) qs.set("station_id", s);
+      return qs;
+    }
+
+    async function loadStations() {
+      try {
+        const res = await fetch("/api/stations");
+        if (!res.ok) return;
+        const list = await res.json();
+        if (!list.length) {
+          stationSelect.innerHTML = '<option value="" disabled selected>No stations yet</option>';
+          stationsCache = [];
+          updateStationMeta();
+          return;
+        }
+        const saved = localStorage.getItem(STATION_KEY) || "";
+        stationSelect.innerHTML = list
+          .map((s) => `<option value="${s.station_id}">${s.station_id}</option>`)
+          .join("");
+        const chosen = list.some((s) => s.station_id === saved) ? saved : list[0].station_id;
+        stationSelect.value = chosen;
+        localStorage.setItem(STATION_KEY, chosen);
+        updateStationMeta(list);
+        loadLatest();
+        loadForecast();
+        const rawActive = document.getElementById("tab-raw").classList.contains("active");
+        if (rawActive) { historyLoaded = true; loadHistory(); }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    let stationsCache = [];
+    function updateStationMeta(list) {
+      if (list) stationsCache = list;
+      const s = currentStation();
+      if (!s) {
+        stationMeta.textContent = "";
+        return;
+      }
+      const info = stationsCache.find((x) => x.station_id === s);
+      stationMeta.textContent = info
+        ? `last seen ${formatTimestamp(info.last_seen)} · ${info.sample_count} samples`
+        : "";
+    }
+
+    function renderLatest(row) {
+      const grid = document.getElementById("latest-grid");
+      const empty = document.getElementById("latest-empty");
+      if (!row) {
+        grid.innerHTML = "";
+        if (!empty) {
+          const p = document.createElement("p");
+          p.id = "latest-empty";
+          p.className = "warning";
+          p.textContent = "No data for the selected station yet.";
+          grid.parentElement.appendChild(p);
+        } else {
+          empty.textContent = "No data for the selected station yet.";
+        }
+        return;
+      }
+      if (empty) empty.remove();
+      const fmt = (v, d) => formatValue(v, d);
+      grid.innerHTML = `
+        <div class="metric"><b>Station</b><div class="value">${row.station_id}</div></div>
+        <div class="metric"><b>Temperature</b><div class="value">${fmt(row.temperatur,1)} C</div></div>
+        <div class="metric"><b>Humidity</b><div class="value">${fmt(row.luftfeuchtigkeit,1)} %</div></div>
+        <div class="metric"><b>Pressure</b><div class="value">${fmt(row.luftdruck,1)} hPa</div></div>
+        <div class="metric"><b>Rain</b><div class="value">${fmt(row.niederschlag,2)} mm</div></div>
+        <div class="metric"><b>Wind</b><div class="value">${fmt(row.windgeschwindigkeit,2)} m/s ${row.windrichtung}</div></div>
+        <div class="metric"><b>Light</b><div class="value">${fmt(row.helligkeit,0)} lx</div></div>
+        <div class="metric"><b>Last received</b><div class="value">${formatTimestamp(row.received_at)}</div></div>`;
+    }
+
+    async function loadLatest() {
+      const qs = withStation(new URLSearchParams());
+      try {
+        const res = await fetch(`/api/weather/latest?${qs.toString()}`);
+        if (res.status === 404) { renderLatest(null); return; }
+        if (!res.ok) return;
+        renderLatest(await res.json());
+      } catch (err) {
+        // ignore
+      }
+    }
+
     function rowHtml(item) {
       return `<tr>
-        <td>${item.received_at}</td>
+        <td>${formatTimestamp(item.received_at)}</td>
         <td>${item.station_id}</td>
         <td>${formatValue(item.temperatur, 1)} C</td>
         <td>${formatValue(item.luftfeuchtigkeit, 1)} %</td>
@@ -233,7 +421,7 @@
 
     async function loadHistory() {
       const hours = document.getElementById("hours").value || "24";
-      const station = document.getElementById("station").value.trim();
+      const station = currentStation();
       const qs = new URLSearchParams({ hours });
       if (station) qs.set("station_id", station);
 
@@ -256,7 +444,23 @@
     }
 
     document.getElementById("load").addEventListener("click", loadHistory);
-    loadHistory();
+
+    let historyLoaded = false;
+    function activateTab(name) {
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.tab === name);
+      });
+      document.querySelectorAll(".tab-panel").forEach((p) => {
+        p.classList.toggle("active", p.id === `tab-${name}`);
+      });
+      if (name === "raw" && !historyLoaded) {
+        historyLoaded = true;
+        loadHistory();
+      }
+    }
+    document.querySelectorAll(".tab").forEach((t) => {
+      t.addEventListener("click", () => activateTab(t.dataset.tab));
+    });
 
     const FORECAST_ICONS = { none: "☀", rain: "☔", snow: "❄" };
     const FORECAST_LABELS = { none: "Dry", rain: "Rain", snow: "Snow" };
@@ -265,7 +469,9 @@
       const status = document.getElementById("forecast-status");
       const grid = document.getElementById("forecast-grid");
       try {
-        const res = await fetch("/api/forecast");
+        const qs = withStation(new URLSearchParams());
+        const url = qs.toString() ? `/api/forecast?${qs.toString()}` : "/api/forecast";
+        const res = await fetch(url);
         if (!res.ok) {
           const detail = await res.text();
           status.textContent = `Forecast unavailable (${res.status}): ${detail}`;
@@ -298,6 +504,18 @@
     }
 
     loadForecast();
+
+    stationSelect.addEventListener("change", () => {
+      localStorage.setItem(STATION_KEY, currentStation());
+      updateStationMeta();
+      loadLatest();
+      loadForecast();
+      historyLoaded = false;
+      const rawActive = document.getElementById("tab-raw").classList.contains("active");
+      if (rawActive) { historyLoaded = true; loadHistory(); }
+    });
+
+    loadStations();
   </script>
 </body>
 </html>

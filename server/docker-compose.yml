@@ -36,6 +36,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data:ro
+      - ./src/weather_server/templates:/app/src/weather_server/templates:ro
 
   grafana:
     image: grafana/grafana-oss:11.1.0
