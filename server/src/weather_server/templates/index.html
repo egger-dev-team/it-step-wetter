@@ -362,7 +362,33 @@
       <div>
         <span class="place">Wilder Kaiser · St. Johann in Tirol</span>
         <h1>Wetterstation St. Johann in Tirol</h1>
-        <p class="sub">Live readings from the foot of the Wilder Kaiser. Data is stored locally (rolling 7 days) and available over your Wi-Fi network.</p>
+        <p id="hero-summary" class="sub">
+          {% if latest %}
+            {% set t = latest['temperatur'] %}
+            {% set h = latest['luftfeuchtigkeit'] %}
+            {% set p = latest['luftdruck'] %}
+            {% set r = latest['niederschlag'] %}
+            {% set w = latest['windgeschwindigkeit'] %}
+            {% set d = latest['windrichtung'] %}
+            {% set lx = latest['helligkeit'] %}
+            {% if r > 0.2 %}
+              Rain is currently falling
+            {% elif h >= 92 and w < 2 %}
+              The air feels foggy and damp
+            {% elif lx < 3000 %}
+              Skies look mostly cloudy right now
+            {% else %}
+              Conditions look mostly clear at the moment
+            {% endif %}
+            at {{ '%.1f'|format(t) }} C with {{ '%.0f'|format(h) }}% humidity.
+            Wind from {{ d }} is blowing at {{ '%.1f'|format(w) }} m/s while pressure holds near {{ '%.0f'|format(p) }} hPa.
+            Overall it feels
+            {% if t >= 10 %}mild{% elif t >= 3 %}cool{% else %}cold{% endif %},
+            with {% if lx >= 20000 %}bright{% else %}muted{% endif %} daylight and {{ '%.2f'|format(r) }} mm of recent precipitation.
+          {% else %}
+            No live readings are available right now. As soon as the station sends data, this section will describe current conditions.
+          {% endif %}
+        </p>
       </div>
       <span class="scene-mood" id="scene-mood">…</span>
     </header>
@@ -525,6 +551,7 @@
     function renderLatest(row) {
       const grid = document.getElementById("latest-grid");
       const empty = document.getElementById("latest-empty");
+      const summary = document.getElementById("hero-summary");
       if (!row) {
         grid.innerHTML = "";
         if (!empty) {
@@ -535,6 +562,9 @@
           grid.parentElement.appendChild(p);
         } else {
           empty.textContent = "No data for the selected station yet.";
+        }
+        if (summary) {
+          summary.textContent = "No live readings are available right now. As soon as the station sends data, this section will describe current conditions.";
         }
         return;
       }
@@ -549,6 +579,38 @@
         <div class="metric"><b>Wind</b><div class="value">${fmt(row.windgeschwindigkeit,2)} m/s ${row.windrichtung}</div></div>
         <div class="metric"><b>Light</b><div class="value">${fmt(row.helligkeit,0)} lx</div></div>
         <div class="metric"><b>Last received</b><div class="value">${formatTimestamp(row.received_at)}</div></div>`;
+      if (summary) summary.textContent = buildWeatherSummary(row);
+    }
+
+    function buildWeatherSummary(row) {
+      if (!row) {
+        return "No live readings are available right now. As soon as the station sends data, this section will describe current conditions.";
+      }
+      const temp = Number(row.temperatur);
+      const humidity = Number(row.luftfeuchtigkeit);
+      const pressure = Number(row.luftdruck);
+      const rain = Number(row.niederschlag);
+      const wind = Number(row.windgeschwindigkeit);
+      const light = Number(row.helligkeit);
+      const direction = String(row.windrichtung || "variable");
+
+      let condition = "Conditions look mostly clear at the moment";
+      if (Number.isFinite(rain) && rain > 0.2) {
+        condition = "Rain is currently falling";
+      } else if (Number.isFinite(humidity) && humidity >= 92 && (!Number.isFinite(wind) || wind < 2)) {
+        condition = "The air feels foggy and damp";
+      } else if (Number.isFinite(light) && light < 3000) {
+        condition = "Skies look mostly cloudy right now";
+      }
+
+      const lightDesc = Number.isFinite(light) && light >= 20000 ? "bright" : "muted";
+      const tempFeel = Number.isFinite(temp)
+        ? (temp >= 10 ? "mild" : (temp >= 3 ? "cool" : "cold"))
+        : "changeable";
+
+      return `${condition} at ${formatValue(temp, 1)} C with ${formatValue(humidity, 0)}% humidity. `
+        + `Wind from ${direction} is blowing at ${formatValue(wind, 1)} m/s while pressure holds near ${formatValue(pressure, 0)} hPa. `
+        + `Overall it feels ${tempFeel}, with ${lightDesc} daylight and ${formatValue(rain, 2)} mm of recent precipitation.`;
     }
 
     async function loadLatest() {
