@@ -2,7 +2,7 @@
 
 This repo is a local weather platform built around an ESP8266 station, a Python API, PostgreSQL, a browser dashboard, and Grafana. The physical station reads sensors, sends measurements over Wi-Fi to the API using the legacy GET endpoint, the API validates and stores them in Postgres, then exposes the data back out through JSON endpoints, a Jinja-rendered web UI, and Grafana dashboards. On top of that, the server can generate a simple short-range precipitation forecast from recent station history using a pre-trained scikit-learn model.
 
-The live server architecture is defined by `server/README.md`, `server/docker-compose.yml`, and `server/src/weather_server/main.py`. One important note: the root `README.md` still describes an older SQLite-based setup, but the current implementation in code is PostgreSQL-based.
+The live server architecture is defined by `server/README.md`, `server/docker-compose.yml`, and `server/src/weather_server/main.py`. 
 
 ## Diagram
 
