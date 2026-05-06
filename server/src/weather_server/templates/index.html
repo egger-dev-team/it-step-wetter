@@ -3,16 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Weatherstation Local</title>
+  <title>Wetterstation St. Johann in Tirol</title>
   <style>
     :root {
-      --bg: #f7f8f3;
+      --bg: #f4f6f1;
       --paper: #ffffff;
       --ink: #17313a;
       --muted: #5f7279;
-      --accent: #0b8a6a;
-      --accent-2: #f0b429;
+      --accent: #0b6e54;
+      --accent-2: #c9572c;
       --line: #d9e1e3;
+      --rock: #6b7480;
+      --rock-dark: #475059;
+      --snow: #f3f6f8;
+      --forest: #2f5a3d;
+      --forest-dark: #244633;
+      --meadow: #6ea35a;
     }
 
     * { box-sizing: border-box; }
@@ -21,12 +27,148 @@
       margin: 0;
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       color: var(--ink);
-      background:
-        radial-gradient(circle at 10% 10%, #e4f6ee 0%, transparent 45%),
-        radial-gradient(circle at 85% 20%, #fff0cc 0%, transparent 40%),
-        var(--bg);
+      background: var(--bg);
       min-height: 100vh;
+      position: relative;
     }
+
+    /* ---------- Wilder Kaiser background ---------- */
+    .bg-photo,
+    .bg-tint,
+    .bg-fx {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+    .bg-photo {
+      z-index: -3;
+      background-image: url('/static/wilder-kaiser/day.jpg');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      transition: opacity 800ms ease, filter 800ms ease;
+    }
+    body[data-photo="day"]    .bg-photo { background-image: url('/static/wilder-kaiser/day.jpg'); }
+    body[data-photo="dusk"]   .bg-photo { background-image: url('/static/wilder-kaiser/dusk.jpg'); }
+    body[data-photo="winter"] .bg-photo { background-image: url('/static/wilder-kaiser/winter.jpg'); }
+
+    /* Mood filters */
+    body[data-mood="clear"]  .bg-photo { filter: saturate(1.05) brightness(1.0); }
+    body[data-mood="cloudy"] .bg-photo { filter: saturate(0.55) brightness(0.82) contrast(0.92); }
+    body[data-mood="rain"]   .bg-photo { filter: saturate(0.4)  brightness(0.65) contrast(0.95); }
+    body[data-mood="snow"]   .bg-photo { filter: saturate(0.85) brightness(1.05) contrast(0.95); }
+    body[data-mood="fog"]    .bg-photo { filter: saturate(0.35) brightness(0.95) blur(2.5px); }
+    body[data-time="dusk"]   .bg-photo { filter: saturate(0.85) brightness(0.7) hue-rotate(-8deg); }
+    body[data-time="night"]  .bg-photo { filter: saturate(0.45) brightness(0.32) hue-rotate(-15deg); }
+    body[data-time="night"][data-mood="rain"] .bg-photo { filter: saturate(0.3) brightness(0.25); }
+    body[data-time="night"][data-mood="snow"] .bg-photo { filter: saturate(0.5) brightness(0.45); }
+    body[data-time="night"][data-mood="fog"]  .bg-photo { filter: saturate(0.3) brightness(0.4) blur(2.5px); }
+
+    /* Soft tint to keep cards readable */
+    .bg-tint {
+      z-index: -2;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.85) 60%, rgba(255,255,255,0.95) 100%);
+      transition: background 800ms ease;
+    }
+    body[data-time="dusk"]  .bg-tint {
+      background:
+        linear-gradient(180deg, rgba(255,180,140,0.35) 0%, rgba(40,30,60,0.25) 35%, rgba(255,255,255,0.92) 100%);
+    }
+    body[data-time="night"] .bg-tint {
+      background:
+        linear-gradient(180deg, rgba(8,16,40,0.55) 0%, rgba(8,16,40,0.35) 35%, rgba(255,255,255,0.92) 100%);
+    }
+    body[data-mood="fog"]   .bg-tint {
+      background:
+        linear-gradient(180deg, rgba(220,228,232,0.65) 0%, rgba(245,247,249,0.95) 100%);
+    }
+
+    /* Animated rain / snow overlays */
+    .bg-fx {
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 600ms ease;
+      mix-blend-mode: screen;
+    }
+    .bg-fx.rain {
+      background-image:
+        repeating-linear-gradient(105deg, rgba(220,235,245,0) 0 8px, rgba(220,235,245,0.6) 8px 9px),
+        repeating-linear-gradient(105deg, rgba(220,235,245,0) 0 14px, rgba(220,235,245,0.4) 14px 15px);
+      background-size: 80px 80px, 110px 110px;
+    }
+    .bg-fx.snow {
+      background-image:
+        radial-gradient(circle at 20% 20%, #fff 1.6px, transparent 2.2px),
+        radial-gradient(circle at 60% 40%, #fff 1.2px, transparent 2px),
+        radial-gradient(circle at 80% 75%, #fff 1.8px, transparent 2.4px),
+        radial-gradient(circle at 35% 80%, #fff 1.1px, transparent 2px),
+        radial-gradient(circle at 90% 20%, #fff 1.4px, transparent 2px);
+      background-size: 180px 180px, 230px 230px, 200px 200px, 260px 260px, 210px 210px;
+    }
+    body[data-mood="rain"] .bg-fx.rain { opacity: 0.7; }
+    body[data-mood="snow"] .bg-fx.snow { opacity: 0.9; }
+    @media (prefers-reduced-motion: no-preference) {
+      body[data-mood="rain"] .bg-fx.rain { animation: rain-shift 0.55s linear infinite; }
+      body[data-mood="snow"] .bg-fx.snow { animation: snow-shift 9s linear infinite; }
+    }
+    @keyframes rain-shift {
+      from { background-position: 0 0, 0 0; }
+      to   { background-position: -22px 80px, 30px 110px; }
+    }
+    @keyframes snow-shift {
+      from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+      to   { background-position: 30px 180px, -40px 230px, 20px 200px, -50px 260px, 35px 210px; }
+    }
+
+    /* Header with banner styling so it sits over the photo */
+    .page-header {
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+      padding: 20px 0 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .page-header h1 { color: #fff; margin: 0; }
+    .page-header .sub {
+      color: rgba(255, 255, 255, 0.92);
+      margin: 4px 0 0;
+      font-size: 0.95rem;
+    }
+    .page-header .place {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.85;
+      margin-bottom: 4px;
+    }
+    .page-header .scene-mood {
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(4px);
+      padding: 6px 12px;
+      border-radius: 999px;
+    }
+    .photo-credit {
+      position: fixed;
+      right: 10px;
+      bottom: 8px;
+      z-index: 1;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.85);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    }
+    .photo-credit a { color: inherit; text-decoration: none; }
+    .photo-credit a:hover { text-decoration: underline; }
+
+    /* Slightly translucent cards so the background still peeks through */
+    .card { background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(2px); }
 
     .container {
       max-width: 960px;
@@ -205,10 +347,25 @@
     .station-bar label { color: var(--muted); font-weight: 600; }
   </style>
 </head>
-<body>
+<body data-photo="day" data-time="day" data-mood="clear">
+  <div class="bg-photo" aria-hidden="true"></div>
+  <div class="bg-tint" aria-hidden="true"></div>
+  <div class="bg-fx rain" aria-hidden="true"></div>
+  <div class="bg-fx snow" aria-hidden="true"></div>
+  <div class="photo-credit" id="hero-credit">
+    <a id="hero-credit-link" href="https://commons.wikimedia.org/wiki/File:Wilder_Kaiser,_Tirol,_Panorama,_160624,_ako.jpg" target="_blank" rel="noopener">
+      <span id="hero-credit-text">© Ansgar Koreng / CC BY-SA 4.0</span>
+    </a>
+  </div>
   <div class="container">
-    <h1>Weatherstation Local Server</h1>
-    <p class="sub">Data is stored locally (rolling 7 days) and available over your Wi-Fi network.</p>
+    <header class="page-header">
+      <div>
+        <span class="place">Wilder Kaiser · St. Johann in Tirol</span>
+        <h1>Wetterstation St. Johann in Tirol</h1>
+        <p class="sub">Live readings from the foot of the Wilder Kaiser. Data is stored locally (rolling 7 days) and available over your Wi-Fi network.</p>
+      </div>
+      <span class="scene-mood" id="scene-mood">…</span>
+    </header>
 
     <div class="tabs" role="tablist">
       <button class="tab active" type="button" role="tab" data-tab="overview">Overview</button>
@@ -398,9 +555,12 @@
       const qs = withStation(new URLSearchParams());
       try {
         const res = await fetch(`/api/weather/latest?${qs.toString()}`);
-        if (res.status === 404) { renderLatest(null); return; }
+        if (res.status === 404) { renderLatest(null); lastLatest = null; applyScene(); return; }
         if (!res.ok) return;
-        renderLatest(await res.json());
+        const data = await res.json();
+        renderLatest(data);
+        lastLatest = data;
+        applyScene();
       } catch (err) {
         // ignore
       }
@@ -464,6 +624,112 @@
 
     const FORECAST_ICONS = { none: "☀", rain: "☔", snow: "❄" };
     const FORECAST_LABELS = { none: "Dry", rain: "Rain", snow: "Snow" };
+
+    // ---------- Wilder Kaiser scene ----------
+    const heroEl = document.body;
+    const sceneMood = document.getElementById("scene-mood");
+    const heroCreditText = document.getElementById("hero-credit-text");
+    const heroCreditLink = document.getElementById("hero-credit-link");
+    let lastLatest = null;
+
+    const PHOTO_CREDITS = {
+      day: {
+        text: "© Ansgar Koreng / CC BY-SA 4.0",
+        href: "https://commons.wikimedia.org/wiki/File:Wilder_Kaiser,_Tirol,_Panorama,_160624,_ako.jpg",
+      },
+      dusk: {
+        text: "© Matti Blume / CC BY-SA 4.0",
+        href: "https://commons.wikimedia.org/wiki/File:Wilder_Kaiser_Nordwand_Abendlicht.jpg",
+      },
+      winter: {
+        text: "© HellasX / Free Art License",
+        href: "https://commons.wikimedia.org/wiki/File:St._Johann_in_Tirol_Kaisergebirge_Panorama_Winter.jpg",
+      },
+    };
+
+    function deriveScene(latest) {
+      const lx   = Number(latest?.helligkeit);
+      const rain = Number(latest?.niederschlag);
+      const temp = Number(latest?.temperatur);
+      const hum  = Number(latest?.luftfeuchtigkeit);
+      const wind = Number(latest?.windgeschwindigkeit);
+
+      // Time of day: prefer measured light, fall back to local clock.
+      let timeOfDay = "day";
+      if (Number.isFinite(lx)) {
+        if (lx < 200)        timeOfDay = "night";
+        else if (lx < 5000)  timeOfDay = "dusk";
+        else                 timeOfDay = "day";
+      } else {
+        const h = new Date().getHours();
+        timeOfDay = (h < 6 || h >= 21) ? "night" : (h < 8 || h >= 19) ? "dusk" : "day";
+      }
+
+      // Precipitation: use station readings only.
+      let precipitation = "none";
+      if (Number.isFinite(rain) && rain > 0.05) {
+        precipitation = (Number.isFinite(temp) && temp <= 1.5) ? "snow" : "rain";
+      }
+
+      // Fog: high humidity + low wind, no precipitation.
+      const fog = Number.isFinite(hum) && hum >= 92
+        && (!Number.isFinite(wind) || wind < 2.0)
+        && precipitation === "none";
+
+      // Cloudiness during daylight: dim daylight or high humidity hint at clouds.
+      let cloudy = false;
+      if (precipitation !== "none") {
+        cloudy = true;
+      } else if (timeOfDay === "day") {
+        if (Number.isFinite(lx)  && lx < 30000) cloudy = true;
+        if (Number.isFinite(hum) && hum >= 80)  cloudy = true;
+      }
+
+      // Mood priority: rain > snow > fog > cloudy > clear.
+      let mood = "clear";
+      if (precipitation === "rain")      mood = "rain";
+      else if (precipitation === "snow") mood = "snow";
+      else if (fog)                      mood = "fog";
+      else if (cloudy)                   mood = "cloudy";
+
+      // Photo selection: snow / cold => winter, dusk/night => dusk, otherwise day.
+      let photo = "day";
+      if (precipitation === "snow" || (Number.isFinite(temp) && temp <= 0)) {
+        photo = "winter";
+      } else if (timeOfDay === "dusk" || timeOfDay === "night") {
+        photo = "dusk";
+      }
+
+      return { timeOfDay, precipitation, cloudy, fog, mood, photo,
+               metrics: { lx, rain, temp, hum, wind } };
+    }
+
+    function moodText(scene, latest) {
+      const parts = [];
+      if (scene.precipitation === "snow")      parts.push("Schneefall · snowfall");
+      else if (scene.precipitation === "rain") parts.push("Regen · rain");
+      else if (scene.fog)                      parts.push("Nebel · fog");
+      else if (scene.cloudy)                   parts.push("bewölkt · cloudy");
+      else if (scene.timeOfDay === "night")    parts.push("klare Nacht · clear night");
+      else if (scene.timeOfDay === "dusk")     parts.push("Dämmerung · dusk");
+      else                                     parts.push("sonnig · sunny");
+      const t = Number(latest?.temperatur);
+      if (Number.isFinite(t)) parts.push(`${t.toFixed(1)} °C`);
+      return parts.join(" · ");
+    }
+
+    function applyScene() {
+      const scene = deriveScene(lastLatest);
+      document.body.dataset.time  = scene.timeOfDay;
+      document.body.dataset.mood  = scene.mood;
+      document.body.dataset.photo = scene.photo;
+      const text = moodText(scene, lastLatest);
+      if (sceneMood) sceneMood.textContent = text;
+      const credit = PHOTO_CREDITS[scene.photo] || PHOTO_CREDITS.day;
+      if (heroCreditText) heroCreditText.textContent = credit.text;
+      if (heroCreditLink) heroCreditLink.href = credit.href;
+    }
+    applyScene();
 
     async function loadForecast() {
       const status = document.getElementById("forecast-status");

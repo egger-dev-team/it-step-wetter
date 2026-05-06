@@ -1,0 +1,23 @@
+Wilder Kaiser background images
+================================
+
+Sourced from Wikimedia Commons. Used under their respective free licenses.
+
+day.jpg
+    File:  Wilder Kaiser, Tirol, Panorama, 160624, ako.jpg
+    Author: Ansgar Koreng
+    License: CC BY-SA 4.0  (https://creativecommons.org/licenses/by-sa/4.0/)
+    Source: https://commons.wikimedia.org/wiki/File:Wilder_Kaiser,_Tirol,_Panorama,_160624,_ako.jpg
+
+dusk.jpg
+    File:  Wilder Kaiser Nordwand Abendlicht.jpg
+    Author: Matti Blume (User:MB-one)
+    License: CC BY-SA 4.0  (https://creativecommons.org/licenses/by-sa/4.0/)
+    Source: https://commons.wikimedia.org/wiki/File:Wilder_Kaiser_Nordwand_Abendlicht.jpg
+
+winter.jpg
+    File:  St. Johann in Tirol Kaisergebirge Panorama Winter.jpg
+    Author: HellasX (Wikimedia Commons)
+    License: Free Art License 1.3  (http://artlibre.org/licence/lal/en)
+    Source: https://commons.wikimedia.org/wiki/File:St._Johann_in_Tirol_Kaisergebirge_Panorama_Winter.jpg
+    Note: Resized to 1920 px wide for web delivery; otherwise unmodified.

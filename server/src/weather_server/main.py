@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .models import WeatherIn, WeatherOut, ForecastItem, ForecastResponse
@@ -32,6 +33,7 @@ CLEANUP_INTERVAL_SECONDS = 3600
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+STATIC_DIR = BASE_DIR / "static"
 
 storage = Storage(database_url=DATABASE_URL, retention_days=RETENTION_DAYS)
 forecaster = Forecaster(model_path=FORECAST_MODEL_PATH)
@@ -62,6 +64,9 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/health")
