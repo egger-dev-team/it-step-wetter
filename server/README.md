@@ -8,6 +8,8 @@ This project runs a full local weather platform in Docker:
 
 The ESP sketch keeps using the legacy query upload format and does not need protocol changes.
 
+For a technical architecture overview with a system diagram, see [architecture.md](architecture.md).
+
 ## Services
 
 - API: http://localhost:8000
