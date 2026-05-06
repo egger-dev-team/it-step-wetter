@@ -53,17 +53,41 @@ def main() -> int:
                                           "@127.0.0.1:5432/weatherstation"))
     parser.add_argument("--station-id", default="sim-backfill")
     parser.add_argument("--hours", type=int, default=8,
-                        help="How many hours of history to seed.")
+                        help="How many hours of history to seed (ignored "
+                             "when --start and --end are given).")
     parser.add_argument("--per-hour", type=int, default=2,
                         help="Samples per hour (>=1).")
+    parser.add_argument("--start", default=None,
+                        help="ISO timestamp (UTC) of first row to insert. "
+                             "Use with --end to backfill a specific gap.")
+    parser.add_argument("--end", default=None,
+                        help="ISO timestamp (UTC) of last row to insert.")
     args = parser.parse_args()
 
-    now = datetime.now(timezone.utc).replace(microsecond=0)
-    interval = timedelta(minutes=60 // max(1, args.per_hour))
-    total = args.hours * args.per_hour + 1
+    if (args.start is None) != (args.end is None):
+        parser.error("--start and --end must be provided together")
+
+    if args.start and args.end:
+        start = datetime.fromisoformat(args.start)
+        end = datetime.fromisoformat(args.end)
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        if end <= start:
+            parser.error("--end must be after --start")
+        interval = timedelta(minutes=60 // max(1, args.per_hour))
+        total_seconds = (end - start).total_seconds()
+        total = int(total_seconds // interval.total_seconds()) + 1
+        anchor = end
+    else:
+        anchor = datetime.now(timezone.utc).replace(microsecond=0)
+        interval = timedelta(minutes=60 // max(1, args.per_hour))
+        total = args.hours * args.per_hour + 1
+
     rows = []
     for i in range(total):
-        ts = now - i * interval
+        ts = anchor - i * interval
         row = build_row(ts)
         rows.append((args.station_id, row["temperatur"],
                      row["luftfeuchtigkeit"], row["luftdruck"],
@@ -85,7 +109,7 @@ def main() -> int:
         conn.commit()
 
     print(f"Inserted {len(rows)} rows for station '{args.station_id}' "
-          f"spanning {args.hours} h ending {now.isoformat()}.")
+          f"ending {anchor.isoformat()}.")
     return 0
 
 
